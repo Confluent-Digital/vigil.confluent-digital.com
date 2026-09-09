@@ -225,6 +225,53 @@
         </tbody>
     </table>
     </div>
+
+    {% if access is not empty %}
+    <div class="card-body border-top small">
+        <a class="text-decoration-none" data-bs-toggle="collapse" href="#paramsLien" role="button"
+           aria-expanded="false" aria-controls="paramsLien">
+            <i class="bi bi-chevron-right"></i> Ce que le publisher peut ajouter au lien
+        </a>
+        <div class="collapse" id="paramsLien">
+            <p class="text-muted mt-2 mb-2">
+                Le lien fonctionne tel quel : le token porte déjà le couple campagne × publisher.
+                Ces paramètres sont facultatifs, et se collent à la suite.
+            </p>
+            <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+                <thead><tr><th>Paramètre</th><th>Rôle</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td class="font-monospace">cid</td>
+                        <td>Son propre identifiant de clic, celui qu'il veut voir revenir sur son
+                            pixel de conversion. <strong>C'est le paramètre qui compte</strong> :
+                            sans lui, on peut lui signaler une conversion, mais pas lui dire
+                            laquelle. Alias : <code>clickid</code>, <code>click_id</code>,
+                            <code>subid</code>, <code>sub_id</code>, <code>ext_id</code>,
+                            <code>transaction_id</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="font-monospace">s1 … s5</td>
+                        <td>Cinq valeurs libres qu'il choisit (source, créa, liste…), restituées
+                            telles quelles dans le reporting et relayables par macro. Alias :
+                            <code>sub1</code> … <code>sub5</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="font-monospace">nom, prenom, email…</td>
+                        <td>Les douze champs du kit mailing, transmis au money site pour
+                            pré-remplir son formulaire. Ils <strong>ne sont jamais enregistrés</strong> :
+                            ni en base, ni dans les journaux, ni dans le <code>Referer</code>.</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+            <p class="text-muted mb-0">
+                Exemple :
+                <code class="text-break">{{ base_url }}/c/{{ access|first.cp_token }}?cid=SON_CLICKID&amp;s1=newsletter</code>
+            </p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 {# ── Destinations de relai ─────────────────────────────────────────────── #}
