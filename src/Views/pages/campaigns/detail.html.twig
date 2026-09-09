@@ -182,7 +182,12 @@
                         <input class="form-control font-monospace" readonly value="{{ link }}"
                                aria-label="Lien de tracking de {{ a.publisher_name }}">
                         <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ link }}"
-                                title="Copier le lien" aria-label="Copier le lien"><i class="bi bi-clipboard"></i></button>
+                                title="Copier le lien nu" aria-label="Copier le lien"><i class="bi bi-clipboard"></i></button>
+                        <button class="btn btn-outline-secondary gen-btn" type="button"
+                                data-lien="{{ link }}" data-publisher="{{ a.publisher_name }}"
+                                data-bs-toggle="modal" data-bs-target="#genLien"
+                                title="Composer le lien avec ses paramètres"
+                                aria-label="Composer le lien"><i class="bi bi-sliders"></i></button>
                     </div>
                 </td>
                 <td class="text-end">{{ a.cp_payout ? a.cp_payout|money(campaign.campaign_currency) : '—' }}</td>
@@ -355,6 +360,81 @@
     </table>
     </div>
 </div>
+
+{# ── Générateur de lien publisher ──────────────────────────────────────── #}
+<div class="modal fade" id="genLien" tabindex="-1" aria-labelledby="genLienTitre" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="genLienTitre">Composer le lien</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+
+        <p class="text-muted small">
+          Pour <strong id="genPublisher">—</strong>. Le lien fonctionne déjà sans rien ajouter :
+          le token porte le couple campagne × publisher. Tout ce qui suit est facultatif.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label" for="genCid">
+            Identifiant de clic de la plateforme <span class="text-muted fw-normal">(cid)</span>
+          </label>
+          <input class="form-control font-monospace" id="genCid" placeholder="{clickid}">
+          <div class="form-text">
+            <strong>C'est le paramètre qui compte.</strong> Sans lui on peut signaler une
+            conversion au publisher, mais pas lui dire laquelle. Mettez ici la macro de sa
+            plateforme — souvent <code>{clickid}</code>, <code>##CLICKID##</code> ou
+            <code>[SUBID]</code> : elle sera remplacée au moment du clic, chez lui.
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          {% for i in 1..5 %}
+          <div class="col-6 col-md-4">
+            <label class="form-label small" for="genS{{ i }}">s{{ i }}</label>
+            <input class="form-control form-control-sm font-monospace gen-sub" id="genS{{ i }}"
+                   data-param="s{{ i }}" placeholder="libre">
+          </div>
+          {% endfor %}
+        </div>
+        <p class="form-text mt-0 mb-3">
+          Cinq valeurs libres que le publisher choisit — source, créa, liste. Restituées telles
+          quelles dans le reporting, et relayables par macro.
+        </p>
+
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="genPrefill">
+          <label class="form-check-label" for="genPrefill">
+            Ajouter les douze champs du kit mailing
+          </label>
+        </div>
+        <p class="form-text mt-0">
+          Ajoute <code>{% for p, m in prefill_fields %}{{ p }}=[{{ m }}]{{ not loop.last ? '&' }}{% endfor %}</code>.
+          Ce sont les jetons que le routeur d'emailing du publisher remplace par les
+          coordonnées du destinataire, pour que le formulaire du money site s'affiche
+          déjà rempli. <strong>Ces valeurs ne sont jamais enregistrées</strong> par Vigil.
+        </p>
+
+        <hr>
+
+        <label class="form-label" for="genOut">Lien à transmettre</label>
+        <textarea class="form-control font-monospace" id="genOut" rows="4" readonly
+                  aria-label="Lien composé"></textarea>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <span class="small text-muted" id="genNote"></span>
+        <div>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+          <button type="button" class="btn btn-primary copy-btn" id="genCopier" data-copy="">
+            <i class="bi bi-clipboard"></i> Copier
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -371,5 +451,74 @@ document.getElementById('previewBtn')?.addEventListener('click', async () => {
         + (data.unknown.length ? '<div class="text-danger mt-1">Macros inconnues : ' + data.unknown.join(', ') + '</div>' : '')
         + '</div>';
 });
+
+// ── Générateur de lien publisher ────────────────────────────────────────────
+(function () {
+    const modal = document.getElementById('genLien');
+    if (!modal) { return; }
+
+    const KIT = {{ prefill_fields|json_encode|raw }};
+
+    const out    = document.getElementById('genOut');
+    const copier = document.getElementById('genCopier');
+    const note   = document.getElementById('genNote');
+    const cid    = document.getElementById('genCid');
+    const kitOn  = document.getElementById('genPrefill');
+    const subs   = Array.from(document.querySelectorAll('.gen-sub'));
+    let   base   = '';
+
+    // Une macro de plateforme ([PRENOM], {clickid}, ##CID##) doit arriver
+    // INTACTE chez l'expéditeur : c'est lui qui la remplace. L'encoder la
+    // rendrait méconnaissable, et le lien partirait avec un %5BPRENOM%5D
+    // littéral dans l'e-mail. On encode donc, puis on rétablit les délimiteurs.
+    const encoder = (v) => encodeURIComponent(v)
+        .replace(/%5B/g, '[').replace(/%5D/g, ']')
+        .replace(/%7B/g, '{').replace(/%7D/g, '}')
+        .replace(/%23/g, '#');
+
+    function composer() {
+        const parts = [];
+        if (cid.value.trim() !== '') { parts.push('cid=' + encoder(cid.value.trim())); }
+        subs.forEach((el) => {
+            if (el.value.trim() !== '') { parts.push(el.dataset.param + '=' + encoder(el.value.trim())); }
+        });
+        if (kitOn.checked) {
+            Object.keys(KIT).forEach((champ) => parts.push(champ + '=[' + KIT[champ] + ']'));
+        }
+
+        const url = base + (parts.length ? '?' + parts.join('&') : '');
+        out.value = url;
+        copier.dataset.copy = url;
+
+        // Un `#` non encodé ouvre le fragment : tout ce qui suit ne quitte
+        // jamais le navigateur, et le paramètre arrive VIDE. C'est acceptable
+        // pour une macro (##CID##), que la plateforme remplace avant l'envoi —
+        // pas pour une valeur figée. On le dit, plutôt que de laisser le lien
+        // se tronquer en silence au premier clic.
+        if (url.indexOf('#') !== -1) {
+            note.innerHTML = '<span class="text-warning">Ce lien contient un <code>#</code> :'
+                + ' ce ne peut être qu\'une macro remplacée par la plateforme AVANT l\'envoi.'
+                + ' Figée, la valeur arriverait vide.</span>';
+        } else if (cid.value.trim() === '') {
+            note.innerHTML = '<span class="text-warning">Sans <code>cid</code>, '
+                + 'aucune conversion ne pourra lui être rattachée.</span>';
+        } else {
+            note.textContent = parts.length + ' paramètre(s)';
+        }
+    }
+
+    modal.addEventListener('show.bs.modal', (e) => {
+        const btn = e.relatedTarget;
+        if (!btn) { return; }
+        base = btn.dataset.lien;
+        document.getElementById('genPublisher').textContent = btn.dataset.publisher;
+        composer();
+    });
+
+    [cid, kitOn].concat(subs).forEach((el) => {
+        el.addEventListener('input', composer);
+        el.addEventListener('change', composer);
+    });
+})();
 </script>
 {% endblock %}

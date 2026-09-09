@@ -64,9 +64,33 @@ compteur, inactives en `text-muted`.
 |---|---|
 | Detail conversion + bouton **Rejouer** | rattraper une panne de plateforme externe sans SQL a la main |
 | Journal des relais (`t_postback_queue`) | code HTTP et corps de reponse, succes **et** echecs |
-| Generateur de lien par acces publisher | copie en un clic, avec les macros documentees a cote |
+| Generateur de lien par acces publisher | fait — bouton **Composer** sur chaque ligne |
 | Testeur de postback | forge un appel `/pb` sur une campagne, en mode simulation |
 | Reconciliation | ecart Vigil / plateforme externe |
+
+## Generateur de lien publisher
+
+Bouton **Composer** a cote de chaque lien de tracking : `cid`, `s1`..`s5`, et un
+interrupteur pour les douze champs du kit mailing. L'URL se recompose a la
+frappe, avec un bouton copier.
+
+**Le piege qu'il ferme** : une macro de plateforme (`[PRENOM]`, `{clickid}`,
+`##CID##`) doit arriver **intacte** chez l'expediteur, c'est lui qui la
+remplace. `encodeURIComponent` la rendrait meconnaissable, et le lien partirait
+avec un `%5BPRENOM%5D` litteral dans l'e-mail — jamais substitue, donc un
+formulaire vide chez le visiteur. Le generateur encode, puis retablit les
+delimiteurs `[` `]` `{` `}` `#`. Les caracteres qui casseraient reellement
+l'URL — `&`, `=`, l'espace, les accents — restent encodes.
+
+Contrepartie assumee du `#` retabli : non encode, il ouvre le fragment, et tout
+ce qui suit ne quitte jamais le navigateur. C'est sans consequence pour une
+macro, remplacee avant l'envoi ; ce serait une valeur vide pour une chaine
+figee. Le generateur l'affiche donc en avertissement des qu'un `#` subsiste,
+plutot que de laisser le lien se tronquer en silence au premier clic.
+
+Il rappelle aussi ce que le lien nu ne dit pas : **sans `cid`, aucune conversion
+ne peut etre rattachee au publisher** — son pixel recevrait un evenement
+qu'il ne saurait relier a rien.
 
 ## Dark mode
 

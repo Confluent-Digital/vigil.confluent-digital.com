@@ -214,6 +214,10 @@ final class CampaignsController
             'postbacks'   => $postbacks->fetchAll(),
             'available'   => $available->fetchAll(),
             'macros'      => MacroEngine::MACROS,
+            // Le generateur de lien propose les douze champs avec le jeton de
+            // substitution du kit mailing ([PRENOM], [EMAIL]...), pas une
+            // valeur : c'est le routeur d'emailing qui les remplace.
+            'prefill_fields' => \App\Core\Prefill::FIELDS,
             'base_url'    => AppUrl::base($request),
             'url_ecart'   => AppUrl::matchesRequest($request) ? null : AppUrl::fromRequest($request),
             'active_page' => 'campaigns',
