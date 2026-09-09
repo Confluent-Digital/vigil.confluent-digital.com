@@ -1,0 +1,136 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Page d'atterrissage de test{% endblock %}
+{% block content %}
+
+<div class="mx-auto" style="max-width:46rem">
+
+    <div class="d-flex align-items-start gap-2 mb-3">
+        <span class="brand-mark"><i class="bi bi-signpost-2"></i></span>
+        <div>
+            <h1 class="h5 mb-1">Page d'atterrissage de test</h1>
+            <p class="text-muted small mb-0">
+                Cette page tient le rôle du money site. Elle affiche ce que Vigil vient de lui
+                transmettre, et <strong>rien d'autre</strong> : elle n'appelle aucun postback,
+                ne lit aucun secret et n'écrit rien.
+            </p>
+        </div>
+    </div>
+
+    {% if not click_id %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+        <strong>Aucun <code>clickid</code> reçu.</strong>
+        La destination de votre campagne doit contenir la macro <code>{clickid}</code> —
+        sans elle, le money site n'a rien à vous renvoyer et aucun postback ne pourra être
+        rattaché à un clic.
+    </div>
+    {% elseif not forme_ok %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>Ce n'est pas un identifiant Vigil.</strong>
+        Un ULID fait 26 caractères. Celui-ci en fait {{ click_id|length }} — c'est probablement
+        l'identifiant de la plateforme externe. Vérifiez que la destination porte bien
+        <code>{clickid}</code> et non <code>{external_clickid}</code>.
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-fingerprint"></i> L'identifiant reçu</div>
+        <div class="card-body">
+            {% if click_id %}
+            <div class="input-group mb-2">
+                <input class="form-control font-monospace fw-semibold" readonly value="{{ click_id }}"
+                       aria-label="Identifiant de clic reçu">
+                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ click_id }}"
+                        title="Copier" aria-label="Copier l'identifiant"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <p class="text-muted small mb-0">
+                C'est cette valeur, et aucune autre, que le money site doit vous renvoyer
+                dans le postback.
+            </p>
+            {% else %}
+            <p class="text-muted mb-0">—</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <i class="bi bi-person-lines-fill"></i> Pré-remplissage du kit mailing
+            <span class="badge text-bg-secondary ms-2">{{ nb_prefill }} / 12</span>
+        </div>
+        <div class="card-body">
+            {% if nb_prefill %}
+            <dl class="row mb-2 small">
+                {% for champ, valeur in prefill %}
+                <dt class="col-sm-3 text-muted fw-normal">{{ champ }}</dt>
+                <dd class="col-sm-9 font-monospace">{{ valeur }}</dd>
+                {% endfor %}
+            </dl>
+            <p class="text-muted small mb-0">
+                Ces valeurs ont traversé Vigil jusqu'ici. Ouvrez
+                <a href="/app/clicks">la liste des clics</a> : vous n'en trouverez
+                <strong>aucune trace</strong>. Elles ne sont écrites ni en base, ni dans les
+                journaux, ni transmises dans le <code>Referer</code>.
+            </p>
+            {% else %}
+            <p class="text-muted small mb-0">
+                Aucun champ reçu. Ajoutez-en au lien de tracking pour vérifier le passage —
+                par exemple <code>&amp;prenom=Marie&amp;email=marie@exemple.fr</code>.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if secrets_masques %}
+    <div class="alert alert-warning py-2 small">
+        <i class="bi bi-shield-lock"></i>
+        Un paramètre <code>s</code> ou <code>secret</code> est arrivé jusqu'ici — sa valeur
+        n'est pas affichée. C'est un paramètre de <strong>postback</strong> : il n'a rien à
+        faire dans l'URL de destination d'une campagne, et ne doit jamais transiter par le
+        navigateur d'un visiteur.
+    </div>
+    {% endif %}
+
+    {% if autres %}
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-list-ul"></i> Autres paramètres reçus</div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                {% for champ, valeur in autres %}
+                <dt class="col-sm-3 text-muted fw-normal font-monospace">{{ champ }}</dt>
+                <dd class="col-sm-9 font-monospace">{{ valeur }}</dd>
+                {% endfor %}
+            </dl>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><i class="bi bi-arrow-return-left"></i> Simuler la validation</div>
+        <div class="card-body">
+            <p class="text-muted small mb-2">
+                À vous de jouer : c'est l'appel que ferait le money site après une vente.
+                Remplacez <code>VOTRE_SECRET</code> par celui du client, visible sur sa fiche.
+            </p>
+
+            {% set pb = app_url ~ '/pb?clickid=' ~ (click_id ?: 'CLICKID')
+                        ~ '&txid=TEST-' ~ 'now'|date('YmdHis') ~ '&amount=10&s=VOTRE_SECRET' %}
+            <div class="input-group input-group-sm mb-2">
+                <input class="form-control font-monospace" readonly value="{{ pb }}"
+                       aria-label="URL de postback à déclencher">
+                <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ pb }}"
+                        title="Copier" aria-label="Copier l'URL de postback"><i class="bi bi-clipboard"></i></button>
+            </div>
+
+            <p class="text-muted small mb-0">
+                Cette page ne le déclenche pas elle-même, et c'est délibéré : un bouton qui
+                appelle <code>/pb</code> avec le secret du client serait un outil de création de
+                conversions accessible à qui trouve l'URL. Vérifiez ensuite le résultat sur
+                <a href="/app/conversions">les conversions</a> et
+                <a href="/app/queue">la file de relais</a>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

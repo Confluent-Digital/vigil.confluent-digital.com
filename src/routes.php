@@ -11,6 +11,7 @@ use App\Modules\Campaigns\Controllers\CampaignsController;
 use App\Modules\Campaigns\Controllers\PostbacksController;
 use App\Modules\Clients\Controllers\ClientsController;
 use App\Modules\Dashboard\Controllers\DashboardController;
+use App\Modules\Landing\Controllers\LandingController;
 use App\Modules\Publishers\Controllers\PixelController;
 use App\Modules\Publishers\Controllers\PublishersController;
 use App\Modules\Sandbox\Controllers\SandboxController;
@@ -35,6 +36,12 @@ return static function (App $app): void {
         $s->getBody()->write('ok');
         return $s->withHeader('Content-Type', 'text/plain');
     });
+
+    // Fausse page d'atterrissage, pour brancher une campagne de test sans
+    // dependre d'un vrai money site. Publique et presente EN PRODUCTION, a la
+    // difference du bac a sable : elle est purement reflechissante — aucun
+    // appel a /pb, aucun secret lu, aucune ecriture. Voir LandingController.
+    $app->get('/lp', [LandingController::class, 'show']);
 
     // Connexion en deux temps. Ces routes sont volontairement HORS du groupe
     // /app : AuthMiddleware exige une session complete, or on est ici en train

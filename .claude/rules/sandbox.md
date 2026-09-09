@@ -28,6 +28,41 @@ Environnements ou il est monte : `dev`, `development`, `local`, `test`.
 Verrouille par `tests/Feature/SandboxGuardTest` — qui construit reellement le
 routeur en `production` et exige zero chemin `/sandbox`.
 
+## `/lp` — la page d'atterrissage, elle, existe en production
+
+Le bac a sable disparaissant en production, il n'y avait aucun moyen d'y
+brancher une campagne de test sans posseder un vrai money site. `/lp` comble ce
+manque **sans rouvrir le trou**.
+
+La difference tient en une phrase : **le faux money site du bac a sable APPELLE
+`/pb`, la page `/lp` ne fait que REFLETER.**
+
+| | bac a sable | `/lp` |
+|---|---|---|
+| appelle `/pb` | oui, cote serveur | jamais |
+| lit un secret en base | oui | jamais |
+| ecrit en base | oui (jeu de test, trafic) | jamais |
+| interroge la base | oui | **meme pas** |
+| existe en production | non | oui |
+
+Elle n'interroge pas la base, pas meme pour savoir si le clic existe : ce serait
+un oracle sur la validite d'un identifiant. `/app/clicks` repond deja a la
+question, derriere authentification.
+
+Elle n'affiche donc que ce que l'appelant vient lui-meme d'envoyer — sauf `s` et
+`secret`, masques : une page de test se montre en capture d'ecran, se partage en
+visio, et reste dans un historique. Leur seule presence est signalee comme une
+erreur de branchement, puisque ce sont des parametres de postback.
+
+Le postback reste a declencher a la main : la page prepare l'URL avec un
+**emplacement** pour le secret. C'est ce qui separe un outil de test d'un bouton
+« creer une conversion ».
+
+Verrouille par `tests/Http/LandingTest` : le secret ne ressort jamais, aucun
+formulaire de declenchement, ouvrir la page ne cree aucune conversion, et les
+deux erreurs de branchement les plus probables sont nommees (`{clickid}` absent
+de la destination, ou `{external_clickid}` mis a sa place).
+
 ## Trois regles de conception
 
 1. **La destination de relai pointe vers nous.** `/sandbox/platform`, jamais une
