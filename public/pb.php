@@ -93,12 +93,14 @@ try {
     $when = (new DateTimeImmutable('@' . intdiv($ms, 1000)))->setTimezone(new DateTimeZone('UTC'));
 
     $stmt = $pdo->prepare(
-        'SELECT click_id_campaign, click_id_publisher, click_external_id, click_date,
-                click_sub1, click_sub2, click_sub3, click_sub4, click_sub5,
-                INET6_NTOA(click_ip) AS click_ip_text, click_country
-           FROM t_click
-          WHERE click_id = :id
-            AND click_date BETWEEN :from AND :to
+        'SELECT c.click_id_campaign, c.click_id_publisher, c.click_external_id, c.click_date,
+                c.click_sub1, c.click_sub2, c.click_sub3, c.click_sub4, c.click_sub5,
+                INET6_NTOA(c.click_ip) AS click_ip_text, c.click_country, c.click_user_agent,
+                p.publisher_token
+           FROM t_click c
+      LEFT JOIN t_publisher p ON p.publisher_id = c.click_id_publisher
+          WHERE c.click_id = :id
+            AND c.click_date BETWEEN :from AND :to
           LIMIT 1'
     );
     $stmt->execute([
@@ -160,9 +162,16 @@ try {
         $status = 'approved';
     }
 
-    $payout = isset($input['payout']) && is_numeric($input['payout'])
-        ? (float) $input['payout']
-        : (float) $campaign['campaign_payout'];
+    // `amount` est le nom employe par les money sites branches sur la plateforme
+    // externe. On ne peut pas leur imposer le notre : le postback est configure
+    // chez eux, souvent dans une interface sans champ libre.
+    $payout = (float) $campaign['campaign_payout'];
+    foreach (['payout', 'amount'] as $champ) {
+        if (isset($input[$champ]) && is_numeric($input[$champ])) {
+            $payout = (float) $input[$champ];
+            break;
+        }
+    }
     $revenue = isset($input['revenue']) && is_numeric($input['revenue'])
         ? (float) $input['revenue']
         : 0.0;
@@ -236,6 +245,7 @@ try {
             'campaign_id'      => $campaign['campaign_id'],
             'campaign_name'    => $campaign['campaign_name'],
             'publisher_id'     => $click['click_id_publisher'],
+            'publisher_token'  => $click['publisher_token'],
             'sub1'             => $click['click_sub1'],
             'sub2'             => $click['click_sub2'],
             'sub3'             => $click['click_sub3'],
@@ -250,6 +260,7 @@ try {
             'datetime'         => gmdate('Y-m-d H:i:s'),
             'ip'               => $click['click_ip_text'],
             'country'          => $click['click_country'],
+            'ua'               => $click['click_user_agent'],
         ]
     ) : 0;
 

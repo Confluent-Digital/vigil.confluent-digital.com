@@ -38,7 +38,7 @@
 
 {# ── Postback entrant : l'URL a donner au client ───────────────────────── #}
 {% set pb_secret = campaign.campaign_postback_secret|default('') %}
-{% set pb_url = base_url ~ '/pb?clickid=CLICKID&txid=TXID&status=approved'
+{% set pb_url = base_url ~ '/pb?clickid=CLICKID&amount=MONTANT&txid=TXID'
                 ~ (pb_secret ? '&s=' ~ pb_secret : '') %}
 <div class="card mb-3">
     <div class="card-header"><i class="bi bi-arrow-return-left"></i> Postback entrant — l'URL à donner au client</div>
@@ -122,8 +122,9 @@
                 <tr>
                     <td class="font-monospace">payout</td>
                     <td><span class="badge text-bg-secondary">non</span></td>
-                    <td>Montant. À défaut, le payout de la campagne
-                        ({{ campaign.campaign_payout|money(campaign.campaign_currency) }}).</td>
+                    <td>Montant de la conversion. Alias <code>amount</code>, le nom employé par
+                        les money sites branchés sur la plateforme externe. À défaut, le payout
+                        de la campagne ({{ campaign.campaign_payout|money(campaign.campaign_currency) }}).</td>
                 </tr>
                 <tr>
                     <td class="font-monospace">revenue</td>

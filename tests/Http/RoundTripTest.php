@@ -16,6 +16,72 @@ namespace App\Tests\Http;
  */
 final class RoundTripTest extends HttpTestCase
 {
+    /**
+     * Toute macro declaree dans `MacroEngine::MACROS` doit etre alimentee par
+     * le contexte de `pb.php`, pas seulement par celui de `c.php`.
+     *
+     * Deux ne l'etaient pas — `{publisher_token}` et `{ua}`. Elles
+     * fonctionnaient sur la destination de campagne et partaient **vides** sur
+     * le relai : le partenaire recevait `&src=` sans valeur, sans erreur, et
+     * sans que rien ne le signale. Une macro annoncee et non alimentee est pire
+     * qu'une macro absente, puisque le formulaire l'accepte.
+     */
+    public function testToutesLesMacrosDeTrackingSontAlimenteesSurLeRelai(): void
+    {
+        // `country` est exclu : il depend d'une resolution GeoIP absente en
+        // developpement, et son vide est legitime. Les subs sont fournis par le
+        // clic ci-dessous, donc attendus non vides.
+        $exclues = ['country'];
+        $macros  = array_values(array_diff(\App\Core\MacroEngine::TRACKING_MACROS, $exclues));
+
+        $gabarit = [];
+        foreach ($macros as $m) {
+            $gabarit[] = $m . '={' . $m . '}';
+        }
+
+        $ctx = $this->makeCampaign($this->baseUrl() . '/money?clickid={clickid}');
+
+        $this->pdo->prepare(
+            'INSERT INTO t_campaign_postback
+                 (cpb_id_campaign, cpb_name, cpb_url, cpb_method, cpb_on_status)
+             VALUES (:c, :n, :u, \'GET\', \'approved\')'
+        )->execute([
+            'c' => $ctx['campaign_id'],
+            'n' => 'PHPUNIT-macros',
+            'u' => 'https://plateforme.test/pixel?' . implode('&', $gabarit),
+        ]);
+
+        $r = $this->get('/c/' . $ctx['token'] . '?cid=EXT-1&s1=a&s2=b&s3=c&s4=d&s5=e');
+        parse_str((string) parse_url($r['headers']['location'], PHP_URL_QUERY), $q);
+        usleep(300000);
+
+        $this->get(sprintf(
+            '/pb?clickid=%s&txid=TX-MACROS&payout=12&revenue=3&s=%s',
+            $q['clickid'],
+            $ctx['secret']
+        ));
+
+        $stmt = $this->pdo->prepare(
+            'SELECT q.pq_url FROM t_postback_queue q
+               JOIN t_conversion v ON v.conversion_id = q.pq_id_conversion
+              WHERE v.conversion_id_campaign = :c ORDER BY q.pq_id DESC LIMIT 1'
+        );
+        $stmt->execute(['c' => $ctx['campaign_id']]);
+        $url = (string) $stmt->fetchColumn();
+
+        self::assertNotSame('', $url, 'un relai doit avoir ete empile');
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $recu);
+
+        $vides = [];
+        foreach ($macros as $m) {
+            if (($recu[$m] ?? '') === '') {
+                $vides[] = '{' . $m . '}';
+            }
+        }
+
+        self::assertSame([], $vides, 'macros declarees mais vides sur le relai : ' . implode(', ', $vides));
+    }
+
     public function testLIdentifiantDeLaPlateformeFaitLAllerRetour(): void
     {
         // Une destination de relai qui renvoie le cid a l'expediteur.

@@ -111,8 +111,31 @@ pre-remplissage perdu en silence serait pire qu'un alias de trop.
 ## Macros disponibles
 
 **Tracking** : `{clickid}` `{external_clickid}` `{campaign_id}` `{campaign_name}`
-`{publisher_id}` `{publisher_token}` `{sub1}`..`{sub5}` `{timestamp}`
-`{datetime}` `{ip}` `{country}` `{ua}`
+`{publisher_id}` `{publisher_token}` `{sub1}`..`{sub5}` `{payout}` `{revenue}`
+`{currency}` `{txid}` `{status}` `{timestamp}` `{datetime}` `{ip}` `{country}`
+`{ua}`
+
+**`MacroEngine::MACROS` sert deux rendus** : la destination de campagne (rendue
+par `c.php`) et la destination de relai (rendue par `PostbackRouter` avec le
+contexte de `pb.php`). Une macro n'y a sa place que si **les deux** l'alimentent.
+
+Deux y manquaient — `{publisher_token}` et `{ua}`, servis par `c.php`, absents
+du contexte de `pb.php`. Elles marchaient donc sur la destination et partaient
+**vides** sur le relai, sans erreur et sans que rien ne le signale. C'est
+`pb.php` qui a ete complete (jointure sur `t_publisher`, `click_user_agent`
+ajoute au SELECT), et non la liste amputee : retirer `{publisher_token}` faisait
+rejeter en 422, par le formulaire de campagne, une destination parfaitement
+valide. Corriger la declaration plutot que l'implementation casse l'usage qui
+fonctionnait.
+
+La jointure est **sur `/pb`, pas sur `/c`** — le chemin du clic servait deja le
+jeton depuis `CampaignCache`. Mesure : 0,0660 ms sans, 0,0845 ms avec, sur 3 000
+executions ; l'ecart est sans commune mesure avec le budget du postback.
+
+Verrouille par `RoundTripTest::testToutesLesMacrosDeTrackingSontAlimenteesSurLeRelai`,
+qui construit une destination employant **toutes** les macros declarees et exige
+qu'aucune ne parte vide. Une macro ajoutee a la liste sans etre alimentee fait
+desormais echouer la suite.
 
 **Pre-remplissage** : `{civ}` `{nom}` `{prenom}` `{email}` `{cp}` `{ville}`
 `{pays}` `{jour}` `{mois}` `{annee}` `{naissance}` `{tel}`, plus `{prefill}` qui

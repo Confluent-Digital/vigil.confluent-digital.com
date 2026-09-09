@@ -22,6 +22,15 @@ final class MacroEngine
         'timestamp', 'datetime', 'ip', 'country', 'ua',
     ];
 
+    // Cette liste sert DEUX rendus : la destination de campagne (rendue par
+    // `c.php`) et la destination de relai (rendue par `PostbackRouter` avec le
+    // contexte de `pb.php`). Une macro n'y a sa place que si les deux
+    // l'alimentent — sinon elle marche d'un cote et part vide de l'autre, sans
+    // erreur. C'etait le cas de `publisher_token` : servi par `c.php`, absent
+    // du contexte de `pb.php`. La retirer aurait casse un usage qui fonctionne,
+    // le formulaire de campagne rejetant alors une destination valide ; c'est
+    // `pb.php` qui a ete complete.
+
     /**
      * Macros de pre-remplissage du kit mailing (cf. `Prefill`). Elles portent
      * de la donnee personnelle : elles transitent vers le money site, elles ne

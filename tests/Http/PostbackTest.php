@@ -133,6 +133,68 @@ final class PostbackTest extends HttpTestCase
     }
 
     /**
+     * Le money site branche sur la plateforme externe nomme le montant
+     * `amount`. On ne peut pas lui imposer `payout` : le postback se configure
+     * chez lui, souvent dans une interface sans champ libre. Non reconnu, le
+     * montant serait silencieusement remplace par celui de la campagne.
+     */
+    public function testLeMontantEstAccepteSousLeNomAmount(): void
+    {
+        $ctx  = $this->makeCampaign('https://money.test/?c={clickid}');
+        $clic = $this->clic($ctx);
+
+        $this->get("/pb?clickid=$clic&txid=TX-AMOUNT&amount=42.5&s={$ctx['secret']}");
+
+        $stmt = $this->pdo->prepare(
+            "SELECT conversion_payout FROM t_conversion
+              WHERE conversion_id_campaign = :c AND conversion_external_txid = 'TX-AMOUNT'"
+        );
+        $stmt->execute(['c' => $ctx['campaign_id']]);
+
+        self::assertSame('42.5000', $stmt->fetchColumn());
+    }
+
+    /**
+     * Le piege : `??` ne bascule que sur `null`, pas sur la chaine vide. Un
+     * money site qui emet TOUJOURS `payout=`, parfois vide, voyait donc son
+     * `amount` ignore — et le montant remplace en silence par celui de la
+     * campagne. C'est le cas le plus courant d'un postback configure dans une
+     * interface a gabarit fixe.
+     */
+    public function testUnPayoutVideLaisseAmountSAppliquer(): void
+    {
+        $ctx  = $this->makeCampaign('https://money.test/?c={clickid}');
+        $clic = $this->clic($ctx);
+
+        $this->get("/pb?clickid=$clic&txid=TX-VIDE&payout=&amount=33&s={$ctx['secret']}");
+
+        $stmt = $this->pdo->prepare(
+            "SELECT conversion_payout FROM t_conversion
+              WHERE conversion_id_campaign = :c AND conversion_external_txid = 'TX-VIDE'"
+        );
+        $stmt->execute(['c' => $ctx['campaign_id']]);
+
+        self::assertSame('33.0000', $stmt->fetchColumn());
+    }
+
+    /** `payout` reste prioritaire si les deux arrivent. */
+    public function testPayoutPrimeSurAmount(): void
+    {
+        $ctx  = $this->makeCampaign('https://money.test/?c={clickid}');
+        $clic = $this->clic($ctx);
+
+        $this->get("/pb?clickid=$clic&txid=TX-DEUX&payout=7&amount=99&s={$ctx['secret']}");
+
+        $stmt = $this->pdo->prepare(
+            "SELECT conversion_payout FROM t_conversion
+              WHERE conversion_id_campaign = :c AND conversion_external_txid = 'TX-DEUX'"
+        );
+        $stmt->execute(['c' => $ctx['campaign_id']]);
+
+        self::assertSame('7.0000', $stmt->fetchColumn());
+    }
+
+    /**
      * Sans txid, on retombe sur « une conversion par clic ». C'est degrade :
      * cela interdit deux ventes sur un meme clic. Fige ici pour que le
      * compromis reste conscient.

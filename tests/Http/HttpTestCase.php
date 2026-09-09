@@ -56,6 +56,16 @@ abstract class HttpTestCase extends TestCase
     {
         foreach ($this->aNettoyer['campaign'] as $id) {
             $this->pdo->prepare('DELETE FROM t_click WHERE click_id_campaign = :i')->execute(['i' => $id]);
+            // Avant les conversions : la file reference conversion_id. Elle
+            // etait oubliee, et chaque passage de la suite laissait derriere
+            // lui des relais `pending` vers un domaine de test — inoffensifs
+            // tant qu'aucun worker ne tourne, mais la file grossissait sans
+            // fin, et un cron actif les aurait envoyes pour de vrai.
+            $this->pdo->prepare(
+                'DELETE q FROM t_postback_queue q
+                   JOIN t_conversion c ON c.conversion_id = q.pq_id_conversion
+                  WHERE c.conversion_id_campaign = :i'
+            )->execute(['i' => $id]);
             $this->pdo->prepare('DELETE FROM t_conversion WHERE conversion_id_campaign = :i')->execute(['i' => $id]);
             $this->pdo->prepare('DELETE FROM t_campaign_publisher WHERE cp_id_campaign = :i')->execute(['i' => $id]);
             $this->pdo->prepare('DELETE FROM t_campaign_postback WHERE cpb_id_campaign = :i')->execute(['i' => $id]);
