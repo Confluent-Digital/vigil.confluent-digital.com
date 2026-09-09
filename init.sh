@@ -307,6 +307,25 @@ else
     skip "pas de composer.json — dependances non installees"
 fi
 
+# Les assets ne sont pas versionnes : `public/assets/dist/` est genere depuis
+# node_modules et `public/assets/src/`. Sans cette etape, le back-office
+# s'affiche sans aucune feuille de style — 404 sur bootstrap.min.css.
+if [ -f "$ROOT/package.json" ]; then
+    if [ ! -d "$ROOT/node_modules/bootstrap" ]; then
+        docker exec -e HOME="$DOCKER_WORKING_DIR" vigil_php npm install --silent >/dev/null 2>&1 \
+            || { docker exec -e HOME="$DOCKER_WORKING_DIR" vigil_php npm install; die "npm install a echoue."; }
+        ok "npm install"
+    else
+        skip "node_modules deja present"
+    fi
+
+    bash "$ROOT/scripts/copy-assets.sh" >/dev/null 2>&1 \
+        || { bash "$ROOT/scripts/copy-assets.sh"; die "construction des assets echouee."; }
+    ok "assets construits ($(find "$ROOT/public/assets/dist" -type f 2>/dev/null | wc -l) fichiers)"
+else
+    skip "pas de package.json — assets non construits"
+fi
+
 if [ -f "$ROOT/phinx.php" ] && [ -n "$(ls -A "$ROOT/database/migrations" 2>/dev/null)" ]; then
     docker exec vigil_php vendor/bin/phinx migrate >/dev/null 2>&1 \
         || { docker exec vigil_php vendor/bin/phinx migrate; die "Les migrations ont echoue."; }
@@ -429,6 +448,11 @@ AUTH="$(docker exec vigil_database mariadb -N -B -u root -p"${DB_ROOT_PASSWORD:-
 [ "$AUTH" = "mysql_native_password" ] \
     && ok "auth MariaDB = mysql_native_password (compatible SQLyog)" \
     || warn "auth MariaDB = ${AUTH:-inconnue} — SQLyog ne saura pas se connecter"
+
+for a in bootstrap.min.css bootstrap-icons.css vigil.css vigil.js; do
+    [ -f "$ROOT/public/assets/dist/$a" ] && ok "asset $a" \
+        || { warn "asset MANQUANT : $a — le back-office s'affichera sans style"; FAILED=1; }
+done
 
 HTTP="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$DOCKER_NGINX_PORT/" || echo 000)"
 case "$HTTP" in

@@ -1,0 +1,828 @@
+/* ============================================================================
+   Vigil — surcouche Bootstrap 5.3.
+
+   Un outil de travail interne : la densite est une qualite, le chiffre est le
+   sujet, l'ecran se scanne. La couleur est reservee au statut et a l'action ;
+   la hierarchie se fait au poids et a l'espacement.
+
+   Tout est exprime en variables CSS pour que les deux themes restent tenus.
+   Aucune couleur litterale n'est posee directement sur un element : elle
+   serait juste dans un theme et fausse dans l'autre.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   1. Jetons — theme clair (valeurs par defaut)
+   ------------------------------------------------------------------------ */
+:root {
+    /* Typographie : pile systeme, aucune police externe (le back-office doit
+       s'afficher hors ligne). */
+    --vg-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+               Arial, "Noto Sans", sans-serif;
+    --vg-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", "Courier New", monospace;
+
+    /* Echelle typographique — un rapport ~1.2, tronquee a ce dont on se sert. */
+    --vg-fs-micro: .6875rem;   /* 11px — libelles d'en-tete, hints */
+    --vg-fs-xs:    .75rem;     /* 12px — meta, badges */
+    --vg-fs-sm:    .8125rem;   /* 13px — tableaux, code */
+    --vg-fs-base:  .875rem;    /* 14px — corps */
+    --vg-fs-md:    1rem;       /* 16px — sous-titres */
+    --vg-fs-lg:    1.125rem;   /* 18px — titres d'ecran */
+    --vg-fs-xl:    1.75rem;    /* 28px — chiffres du tableau de bord */
+
+    /* Echelle d'espacement — multiples de 4px, quatre crans utilises. */
+    --vg-sp-1: .25rem;
+    --vg-sp-2: .5rem;
+    --vg-sp-3: .75rem;
+    --vg-sp-4: 1rem;
+    --vg-sp-5: 1.5rem;
+    --vg-sp-6: 2rem;
+
+    /* Rayons — deux valeurs, pas plus. */
+    --vg-radius-sm: 4px;
+    --vg-radius:    7px;
+
+    /* Surfaces */
+    --vg-canvas:      #f2f3f6;  /* fond de page */
+    --vg-surface:     #ffffff;  /* cartes, barre de navigation */
+    --vg-surface-alt: #f7f8fa;  /* en-tetes de carte, thead, lignes survolees */
+    --vg-line:        #e2e5ea;  /* filet standard */
+    --vg-line-strong: #ccd1d9;  /* filet sous un thead */
+
+    /* Texte */
+    --vg-text:        #15181d;
+    --vg-text-strong: #000000;
+    --vg-text-muted:  #5b6270;  /* 6.2:1 sur blanc */
+
+    /* Accent — indigo. Sert a l'action et a la position courante, jamais a
+       decorer. */
+    --vg-accent:        #4f46e5;
+    --vg-accent-hover:  #4338ca;
+    --vg-accent-active: #3730a3;
+    --vg-accent-text:   #4338ca;  /* accent sur fond clair, pour du texte */
+    --vg-accent-soft:   #eef1fe;
+    --vg-accent-line:   #c9cdf7;
+
+    /* Palette de statut — teinte de fond, texte, filet. Meme semantique dans
+       les deux themes : vert = fait, ambre = en cours, rouge = casse,
+       gris = neutre, ardoise = terminal. */
+    --vg-ok-bg:     #e3f5e9;  --vg-ok-fg:     #146c37;  --vg-ok-line:     #b5e2c6;
+    --vg-warn-bg:   #fdf0d5;  --vg-warn-fg:   #8a5a06;  --vg-warn-line:   #f2d79a;
+    --vg-bad-bg:    #fde8e8;  --vg-bad-fg:    #b02020;  --vg-bad-line:    #f4c2c2;
+    --vg-info-bg:   #e5f0fb;  --vg-info-fg:   #10558c;  --vg-info-line:   #bcd8f1;
+    --vg-mute-bg:   #eceef2;  --vg-mute-fg:   #4d5461;  --vg-mute-line:   #d6dae1;
+    --vg-dark-bg:   #dfe2e8;  --vg-dark-fg:   #22262e;  --vg-dark-line:   #c4c9d2;
+
+    --vg-code-bg: rgba(15, 23, 42, .055);
+    --vg-shadow:  0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04);
+    --vg-shadow-lg: 0 4px 6px -1px rgba(15, 23, 42, .07), 0 10px 24px -6px rgba(15, 23, 42, .12);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Jetons — theme sombre
+   ------------------------------------------------------------------------ */
+[data-bs-theme="dark"] {
+    --vg-canvas:      #0e1015;
+    --vg-surface:     #171a21;
+    --vg-surface-alt: #1d212a;
+    --vg-line:        #282d38;
+    --vg-line-strong: #363c49;
+
+    --vg-text:        #e5e8ee;
+    --vg-text-strong: #ffffff;
+    --vg-text-muted:  #99a1b0;  /* 6.9:1 sur la surface */
+
+    --vg-accent:        #4f46e5;
+    --vg-accent-hover:  #5b53ea;
+    --vg-accent-active: #6c65ee;
+    --vg-accent-text:   #a5b0fb;
+    --vg-accent-soft:   rgba(99, 102, 241, .16);
+    --vg-accent-line:   rgba(129, 140, 248, .35);
+
+    /* Sur fond sombre, une couleur saturee vibre : fonds tres transparents,
+       textes desatures. Le rouge pur devient agressif — il est adouci. */
+    --vg-ok-bg:   rgba(34, 197, 94, .15);  --vg-ok-fg:   #6ee7a0;  --vg-ok-line:   rgba(34, 197, 94, .32);
+    --vg-warn-bg: rgba(245, 158, 11, .15); --vg-warn-fg: #fbc55a;  --vg-warn-line: rgba(245, 158, 11, .32);
+    --vg-bad-bg:  rgba(239, 68, 68, .15);  --vg-bad-fg:  #f87171;  --vg-bad-line:  rgba(239, 68, 68, .34);
+    --vg-info-bg: rgba(56, 148, 230, .16); --vg-info-fg: #7cc0f5;  --vg-info-line: rgba(56, 148, 230, .34);
+    --vg-mute-bg: rgba(148, 163, 184, .14);--vg-mute-fg: #b2bbc9;  --vg-mute-line: rgba(148, 163, 184, .28);
+    --vg-dark-bg: rgba(226, 232, 240, .13);--vg-dark-fg: #dbe1ea;  --vg-dark-line: rgba(226, 232, 240, .26);
+
+    --vg-code-bg: rgba(148, 163, 184, .14);
+    --vg-shadow:    0 1px 2px rgba(0, 0, 0, .5);
+    --vg-shadow-lg: 0 10px 30px -8px rgba(0, 0, 0, .7);
+}
+
+/* ---------------------------------------------------------------------------
+   3. Raccordement a Bootstrap
+   Les composants Bootstrap lisent ces variables : les rebrancher ici suffit a
+   reteinter tout le back-office sans reecrire un seul composant.
+   ------------------------------------------------------------------------ */
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-body-bg:          var(--vg-canvas);
+    --bs-body-color:       var(--vg-text);
+    --bs-emphasis-color:   var(--vg-text-strong);
+    --bs-secondary-color:  var(--vg-text-muted);   /* pilote .text-muted */
+    --bs-secondary-bg:     var(--vg-surface-alt);
+    --bs-tertiary-bg:      var(--vg-surface-alt);
+    --bs-border-color:     var(--vg-line);
+    --bs-link-color:       var(--vg-accent-text);
+    --bs-link-hover-color: var(--vg-accent-hover);
+    --bs-code-color:       var(--vg-text);
+    --bs-dropdown-bg:      var(--vg-surface);
+    --bs-dropdown-link-hover-bg: var(--vg-surface-alt);
+    --bs-dropdown-border-color:  var(--vg-line);
+    --bs-border-radius:    var(--vg-radius);
+    --bs-border-radius-sm: var(--vg-radius-sm);
+    --bs-border-radius-lg: var(--vg-radius);
+    --bs-font-sans-serif:  var(--vg-sans);
+    --bs-font-monospace:   var(--vg-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   4. Base
+   ------------------------------------------------------------------------ */
+body {
+    font-family: var(--vg-sans);
+    font-size: var(--vg-fs-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--vg-canvas);
+}
+
+h1, h2, h3, h4, h5, h6 { letter-spacing: -.011em; }
+
+/* Le titre d'ecran : un seul niveau, tenu partout. */
+h1.h4, .page-title { font-size: var(--vg-fs-lg); font-weight: 600; }
+
+a { text-underline-offset: .2em; }
+
+hr { border-color: var(--vg-line); opacity: 1; }
+
+/* Anneau de focus : visible, jamais supprime. */
+:focus-visible {
+    outline: 2px solid var(--vg-accent);
+    outline-offset: 2px;
+    border-radius: var(--vg-radius-sm);
+}
+
+::selection { background: var(--vg-accent-soft); }
+
+/* Code — un identifiant, un token, une URL. Pastille discrete pour le
+   detacher du texte courant sans crier. */
+code {
+    font-family: var(--vg-mono);
+    font-size: var(--vg-fs-sm);
+    color: var(--bs-code-color);
+    background: var(--vg-code-bg);
+    padding: .08em .32em;
+    border-radius: var(--vg-radius-sm);
+    word-break: break-word;
+}
+code.small { font-size: var(--vg-fs-xs); }
+code.d-block { padding: var(--vg-sp-2) var(--vg-sp-3); line-height: 1.6; }
+.form-text code, .macro-chip { padding: .1em .35em; }
+
+/* ---------------------------------------------------------------------------
+   5. Barre de navigation
+   ------------------------------------------------------------------------ */
+.navbar-main {
+    background: var(--vg-surface);
+    border-bottom: 1px solid var(--vg-line) !important;
+    padding-top: .4rem;
+    padding-bottom: .4rem;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+.navbar-main .navbar-nav { align-items: center; gap: .125rem; }
+
+.navbar-main .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: var(--vg-fs-md);
+    font-weight: 650;
+    letter-spacing: -.01em;
+    color: var(--vg-text-strong);
+    margin-right: var(--vg-sp-4);
+}
+/* Marque : un carre plein, l'unique surface pleinement accentuee de l'ecran. */
+.brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: var(--vg-radius-sm);
+    background: var(--vg-accent);
+    color: #fff;
+    font-size: .95rem;
+}
+
+.navbar-main .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    line-height: 1;
+    font-size: var(--vg-fs-sm);
+    padding: .45rem .6rem;
+    border-radius: var(--vg-radius-sm);
+    color: var(--vg-text-muted);
+    white-space: nowrap;
+}
+.navbar-main .nav-link .bi { font-size: .95em; opacity: .85; }
+.navbar-main .nav-link:hover,
+.navbar-main .nav-link:focus { color: var(--vg-text); background: var(--vg-surface-alt); }
+.navbar-main .nav-link.active {
+    color: var(--vg-accent-text);
+    background: var(--vg-accent-soft);
+}
+.navbar-main .nav-link.active .bi { opacity: 1; }
+
+.navbar-main .dropdown-menu { box-shadow: var(--vg-shadow-lg); border-color: var(--vg-line); }
+.navbar-main .dropdown-item { font-size: var(--vg-fs-sm); }
+
+/* ---------------------------------------------------------------------------
+   6. En-tete d'ecran — titre, contexte, actions, filtres
+   ------------------------------------------------------------------------ */
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--vg-sp-3);
+    margin-bottom: var(--vg-sp-4);
+}
+.page-head .page-title { margin: 0; }
+.page-head .page-sub {
+    font-size: var(--vg-fs-xs);
+    color: var(--vg-text-muted);
+    margin-top: .15rem;
+}
+.page-actions { display: flex; align-items: center; gap: var(--vg-sp-2); flex-wrap: wrap; }
+
+/* Barre de filtres : chaque select porte son etiquette, sinon on ne sait pas
+   ce qu'on filtre. */
+.filter-bar { display: flex; align-items: center; gap: var(--vg-sp-2); flex-wrap: wrap; }
+.filter {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: var(--vg-surface);
+    border: 1px solid var(--vg-line);
+    border-radius: var(--vg-radius-sm);
+    padding: .1rem .1rem .1rem .55rem;
+}
+.filter-label {
+    font-size: var(--vg-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--vg-text-muted);
+    white-space: nowrap;
+}
+.filter .form-select {
+    border: 0;
+    background-color: transparent;
+    box-shadow: none;
+    padding: .25rem 1.85rem .25rem .35rem;
+    font-size: var(--vg-fs-sm);
+    width: auto;
+    min-height: 1.9rem;
+    color: var(--vg-text);
+}
+.filter .form-select:focus { box-shadow: none; }
+
+/* Note d'ecran : explique la source du chiffre. Discrete, jamais en gras. */
+.screen-note {
+    font-size: var(--vg-fs-xs);
+    color: var(--vg-text-muted);
+    border-left: 2px solid var(--vg-line-strong);
+    padding-left: var(--vg-sp-3);
+    margin-bottom: var(--vg-sp-3);
+    max-width: 90ch;
+}
+
+/* ---------------------------------------------------------------------------
+   7. Cartes
+   ------------------------------------------------------------------------ */
+.card {
+    --bs-card-bg: var(--vg-surface);
+    --bs-card-border-color: var(--vg-line);
+    --bs-card-cap-bg: var(--vg-surface);
+    --bs-card-spacer-y: var(--vg-sp-4);
+    --bs-card-spacer-x: var(--vg-sp-4);
+    box-shadow: var(--vg-shadow);
+}
+.card-header {
+    border-bottom-color: var(--vg-line);
+    padding: .6rem var(--vg-sp-4);
+    font-size: var(--vg-fs-xs);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--vg-text-muted);
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+}
+.card-header .bi { font-size: 1em; }
+.card-header .btn { text-transform: none; letter-spacing: 0; }
+
+/* ---------------------------------------------------------------------------
+   8. Tableaux — le coeur du produit
+   Densite, chiffres tabulaires alignes a droite, en-tetes lisibles, lignes
+   qui se scannent.
+   ------------------------------------------------------------------------ */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--vg-line);
+    --bs-table-hover-bg: var(--vg-surface-alt);
+    --bs-table-hover-color: var(--vg-text);
+    font-size: var(--vg-fs-sm);
+    margin-bottom: 0;
+}
+.table > :not(caption) > * > * { padding: .4rem .625rem; }
+.table > :not(:first-child) { border-top: 0; }
+
+.table thead th {
+    font-size: var(--vg-fs-micro);
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--vg-text-muted);
+    background: var(--vg-surface-alt);
+    white-space: nowrap;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    border-bottom: 0;
+    /* box-shadow plutot que border : survit a position:sticky. */
+    box-shadow: inset 0 -1px 0 var(--vg-line-strong);
+}
+.table tbody td {
+    border-bottom: 1px solid var(--vg-line);
+    vertical-align: middle;
+    color: var(--vg-text);
+}
+.table tbody tr:last-child > td { border-bottom: 0; }
+
+/* Le chiffre est le sujet : chasse fixe et alignement a droite partout ou une
+   valeur numerique brute est declaree (data-order) ou alignee a droite. */
+.table td.text-end,
+.table th.text-end,
+.table td[data-order],
+.stat-value,
+.num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+.table td.text-end, .table th.text-end { padding-right: var(--vg-sp-3); }
+
+/* Un tiret de donnee absente ne doit pas se lire comme un zero : il est gris
+   et ne prend pas le poids d'un chiffre. */
+.table td { font-variant-ligatures: none; }
+
+/* Colonne d'actions : jamais de retour a la ligne, jamais de survol qui saute. */
+.table td .btn + .btn,
+.table td .btn + form,
+.table td form + form { margin-left: .25rem; }
+
+/* Conteneur : les tableaux larges defilent chez eux, le corps de page ne part
+   jamais en scroll horizontal. */
+.card-table .table-responsive { overflow-x: auto; }
+.card-table > .table-responsive:last-child { border-bottom-left-radius: var(--vg-radius); border-bottom-right-radius: var(--vg-radius); }
+
+/* Tableaux longs : hauteur bornee + thead colle. Sans conteneur a hauteur
+   bornee, position:sticky n'a rien a quoi se coller. */
+.table-scroll { max-height: min(calc(100vh - 16rem), 44rem); overflow: auto; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 2; }
+
+/* Ligne de total : porte sur le jeu filtre, jamais sur la page courante. */
+.table tfoot td, .table tfoot th {
+    background: var(--vg-surface-alt);
+    font-weight: 650;
+    border-top: 1px solid var(--vg-line-strong);
+}
+
+/* ---------------------------------------------------------------------------
+   9. Badges de statut
+   Pastilles teintees : lisibles dans les deux themes, et le mot reste present
+   — le statut ne passe jamais par la seule couleur.
+   ------------------------------------------------------------------------ */
+.badge {
+    font-size: var(--vg-fs-micro);
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: .25em .5em;
+    border-radius: var(--vg-radius-sm);
+    border: 1px solid transparent;
+    vertical-align: baseline;
+}
+.badge .bi { font-size: .95em; margin-right: .1em; }
+
+.badge.text-bg-success   { color: var(--vg-ok-fg) !important;   background: var(--vg-ok-bg) !important;   border-color: var(--vg-ok-line); }
+.badge.text-bg-warning   { color: var(--vg-warn-fg) !important; background: var(--vg-warn-bg) !important; border-color: var(--vg-warn-line); }
+.badge.text-bg-danger    { color: var(--vg-bad-fg) !important;  background: var(--vg-bad-bg) !important;  border-color: var(--vg-bad-line); }
+.badge.text-bg-info      { color: var(--vg-info-fg) !important; background: var(--vg-info-bg) !important; border-color: var(--vg-info-line); }
+.badge.text-bg-secondary { color: var(--vg-mute-fg) !important; background: var(--vg-mute-bg) !important; border-color: var(--vg-mute-line); }
+.badge.text-bg-dark      { color: var(--vg-dark-fg) !important; background: var(--vg-dark-bg) !important; border-color: var(--vg-dark-line); }
+.badge.text-bg-light     { color: var(--vg-mute-fg) !important; background: var(--vg-mute-bg) !important; border-color: var(--vg-mute-line); }
+.badge.text-bg-light.text-dark { color: var(--vg-mute-fg) !important; }
+.badge.text-bg-primary   { color: var(--vg-accent-text) !important; background: var(--vg-accent-soft) !important; border-color: var(--vg-accent-line); }
+
+a.badge:hover { filter: brightness(.97); text-decoration: none; }
+[data-bs-theme="dark"] a.badge:hover { filter: brightness(1.15); }
+
+/* ---------------------------------------------------------------------------
+   10. Boutons et formulaires
+   ------------------------------------------------------------------------ */
+.btn {
+    --bs-btn-font-size: var(--vg-fs-sm);
+    --bs-btn-font-weight: 500;
+    --bs-btn-border-radius: var(--vg-radius-sm);
+    --bs-btn-padding-y: .35rem;
+    --bs-btn-padding-x: .7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    white-space: nowrap;
+}
+.btn-sm { --bs-btn-font-size: var(--vg-fs-sm); --bs-btn-padding-y: .3rem; --bs-btn-padding-x: .6rem; }
+
+/* Cible tactile >= 32 px, y compris sur les boutons de ligne de tableau. */
+.btn-xs {
+    --bs-btn-padding-y: .2rem;
+    --bs-btn-padding-x: .5rem;
+    --bs-btn-font-size: var(--vg-fs-xs);
+    min-height: 2rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--vg-accent);
+    --bs-btn-border-color: var(--vg-accent);
+    --bs-btn-hover-bg: var(--vg-accent-hover);
+    --bs-btn-hover-border-color: var(--vg-accent-hover);
+    --bs-btn-active-bg: var(--vg-accent-active);
+    --bs-btn-active-border-color: var(--vg-accent-active);
+    --bs-btn-disabled-bg: var(--vg-accent);
+    --bs-btn-disabled-border-color: var(--vg-accent);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+    --bs-btn-focus-shadow-rgb: 79, 70, 229;
+}
+.btn-outline-secondary {
+    --bs-btn-color: var(--vg-text);
+    --bs-btn-border-color: var(--vg-line-strong);
+    --bs-btn-hover-color: var(--vg-text);
+    --bs-btn-hover-bg: var(--vg-surface-alt);
+    --bs-btn-hover-border-color: var(--vg-line-strong);
+    --bs-btn-active-color: var(--vg-text);
+    --bs-btn-active-bg: var(--vg-surface-alt);
+    --bs-btn-active-border-color: var(--vg-line-strong);
+    background-color: var(--vg-surface);
+}
+.btn-outline-danger {
+    --bs-btn-color: var(--vg-bad-fg);
+    --bs-btn-border-color: var(--vg-bad-line);
+    --bs-btn-hover-color: var(--vg-bad-fg);
+    --bs-btn-hover-bg: var(--vg-bad-bg);
+    --bs-btn-hover-border-color: var(--vg-bad-fg);
+    --bs-btn-active-color: var(--vg-bad-fg);
+    --bs-btn-active-bg: var(--vg-bad-bg);
+    --bs-btn-active-border-color: var(--vg-bad-fg);
+    background-color: transparent;
+}
+.btn-link { --bs-btn-color: var(--vg-text-muted); --bs-btn-hover-color: var(--vg-text); text-decoration: none; }
+
+.form-label {
+    font-size: var(--vg-fs-xs);
+    font-weight: 600;
+    color: var(--vg-text);
+    margin-bottom: .25rem;
+}
+.form-control, .form-select {
+    font-size: var(--vg-fs-base);
+    border-color: var(--vg-line-strong);
+    border-radius: var(--vg-radius-sm);
+    background-color: var(--vg-surface);
+    color: var(--vg-text);
+    padding: .375rem .625rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--vg-accent);
+    box-shadow: 0 0 0 3px var(--vg-accent-soft);
+}
+.form-control::placeholder { color: var(--vg-text-muted); opacity: .7; }
+.form-control[readonly] { background-color: var(--vg-surface-alt); }
+.form-control.font-monospace, input.font-monospace { font-size: var(--vg-fs-sm); }
+.form-text { font-size: var(--vg-fs-xs); color: var(--vg-text-muted); margin-top: .25rem; }
+.form-select-sm, .form-control-sm { font-size: var(--vg-fs-sm); }
+
+/* Champ obligatoire : l'asterisque ne doit pas peser autant qu'une alerte. */
+.form-label .text-danger { font-weight: 400; opacity: .8; }
+
+.input-group .form-control { border-right-width: 1px; }
+.input-group .btn { border-color: var(--vg-line-strong); }
+
+/* Puces de macro : cliquables, elles doivent avoir l'air cliquables. */
+.macro-chip {
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid var(--vg-line);
+    transition: background-color .12s, border-color .12s;
+}
+.macro-chip:hover { background: var(--vg-accent-soft); border-color: var(--vg-accent-line); color: var(--vg-accent-text); }
+
+/* ---------------------------------------------------------------------------
+   11. Alertes
+   ------------------------------------------------------------------------ */
+.alert {
+    font-size: var(--vg-fs-sm);
+    border-radius: var(--vg-radius);
+    border-width: 1px;
+    border-left-width: 3px;
+    padding: .625rem var(--vg-sp-3);
+}
+.alert-success { color: var(--vg-ok-fg);   background: var(--vg-ok-bg);   border-color: var(--vg-ok-line);   border-left-color: var(--vg-ok-fg); }
+.alert-warning { color: var(--vg-warn-fg); background: var(--vg-warn-bg); border-color: var(--vg-warn-line); border-left-color: var(--vg-warn-fg); }
+.alert-danger  { color: var(--vg-bad-fg);  background: var(--vg-bad-bg);  border-color: var(--vg-bad-line);  border-left-color: var(--vg-bad-fg); }
+.alert-secondary { color: var(--vg-text); background: var(--vg-surface-alt); border-color: var(--vg-line); border-left-color: var(--vg-line-strong); }
+.alert a { color: inherit; }
+
+/* ---------------------------------------------------------------------------
+   12. Tuiles de chiffres (tableau de bord)
+   Le tableau de bord doit se lire en trois secondes : un libelle discret, un
+   chiffre qui domine, une provenance en petit.
+   ------------------------------------------------------------------------ */
+.stat {
+    position: relative;
+    display: block;
+    background: var(--vg-surface);
+    border: 1px solid var(--vg-line);
+    border-radius: var(--vg-radius);
+    box-shadow: var(--vg-shadow);
+    padding: var(--vg-sp-3) var(--vg-sp-4);
+    height: 100%;
+    overflow: hidden;
+}
+.stat-label {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: var(--vg-fs-micro);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 650;
+    color: var(--vg-text-muted);
+}
+.stat-value {
+    font-size: var(--vg-fs-xl);
+    line-height: 1.1;
+    font-weight: 620;
+    letter-spacing: -.025em;
+    color: var(--vg-text-strong);
+    margin: .3rem 0 .15rem;
+}
+.stat-hint { font-size: var(--vg-fs-micro); color: var(--vg-text-muted); line-height: 1.35; }
+/* Filigrane : donne un repere visuel a la tuile sans ajouter une couleur. */
+.stat-mark {
+    position: absolute;
+    right: -.35rem;
+    bottom: -.6rem;
+    font-size: 3.2rem;
+    line-height: 1;
+    color: var(--vg-text);
+    opacity: .05;
+    pointer-events: none;
+}
+
+/* Liste cle / valeur (encart Etat) */
+.kv { list-style: none; margin: 0; padding: 0; }
+.kv li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--vg-sp-3);
+    padding: .45rem var(--vg-sp-4);
+    border-bottom: 1px solid var(--vg-line);
+    font-size: var(--vg-fs-sm);
+}
+.kv li:last-child { border-bottom: 0; }
+.kv .kv-key { color: var(--vg-text-muted); }
+.kv .kv-val { font-weight: 650; font-variant-numeric: tabular-nums; color: var(--vg-text-strong); }
+.kv .kv-val.is-bad { color: var(--vg-bad-fg); }
+
+/* ---------------------------------------------------------------------------
+   13. Etats vides
+   La base est vide : c'est le premier ecran que voit l'utilisateur. Il doit
+   dire quoi faire ensuite, pas « aucune donnee ».
+   ------------------------------------------------------------------------ */
+.empty {
+    padding: var(--vg-sp-6) var(--vg-sp-4);
+    text-align: center;
+    max-width: 44rem;
+    margin: 0 auto;
+}
+.empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--vg-surface-alt);
+    border: 1px solid var(--vg-line);
+    color: var(--vg-text-muted);
+    font-size: 1.25rem;
+    margin-bottom: var(--vg-sp-3);
+}
+.empty-title {
+    font-size: var(--vg-fs-md);
+    font-weight: 600;
+    color: var(--vg-text);
+    margin-bottom: .35rem;
+}
+.empty-text {
+    font-size: var(--vg-fs-sm);
+    color: var(--vg-text-muted);
+    margin: 0 auto var(--vg-sp-3);
+    max-width: 46ch;
+    line-height: 1.55;
+}
+.empty-actions { display: flex; gap: var(--vg-sp-2); justify-content: center; flex-wrap: wrap; }
+/* Dans une cellule de tableau, l'etat vide ne doit pas heriter du centrage
+   d'un td ni de sa taille de police. */
+td > .empty { padding-top: var(--vg-sp-5); padding-bottom: var(--vg-sp-5); }
+
+/* ---------------------------------------------------------------------------
+   14. Ecran de connexion — la vitrine
+   ------------------------------------------------------------------------ */
+body.auth {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(60rem 34rem at 50% -12rem, var(--vg-accent-soft), transparent 65%),
+        var(--vg-canvas);
+}
+body.auth main { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; }
+
+.login {
+    width: 100%;
+    max-width: 22.5rem;
+    padding: var(--vg-sp-5) 0;
+}
+.login-brand { text-align: center; margin-bottom: var(--vg-sp-5); }
+.login-brand .brand-mark { width: 2.5rem; height: 2.5rem; font-size: 1.4rem; border-radius: var(--vg-radius); }
+.login-name {
+    font-size: 1.35rem;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    color: var(--vg-text-strong);
+    margin: var(--vg-sp-3) 0 .2rem;
+}
+.login-tagline { font-size: var(--vg-fs-xs); color: var(--vg-text-muted); margin: 0; }
+.login .card { box-shadow: var(--vg-shadow-lg); }
+.login .card-body { padding: var(--vg-sp-5); }
+.login .form-control { padding: .5rem .7rem; }
+.login .btn-primary { padding: .5rem; font-size: var(--vg-fs-base); font-weight: 600; }
+.login-foot {
+    text-align: center;
+    font-size: var(--vg-fs-micro);
+    color: var(--vg-text-muted);
+    margin-top: var(--vg-sp-4);
+}
+
+/* ---------------------------------------------------------------------------
+   15. Pied de page
+   ------------------------------------------------------------------------ */
+.app-foot {
+    font-size: var(--vg-fs-micro);
+    color: var(--vg-text-muted);
+    border-top: 1px solid var(--vg-line);
+    margin-top: var(--vg-sp-5);
+    padding-top: var(--vg-sp-3);
+}
+
+/* ---------------------------------------------------------------------------
+   16. Divers
+   ------------------------------------------------------------------------ */
+.text-muted { color: var(--vg-text-muted) !important; }
+.text-danger { color: var(--vg-bad-fg) !important; }
+.text-success { color: var(--vg-ok-fg) !important; }
+.bg-body-tertiary { background-color: var(--vg-surface-alt) !important; }
+
+/* Copie effectuee : retour visuel sur le bouton. */
+.copy-btn.is-copied { color: var(--vg-ok-fg); border-color: var(--vg-ok-line); }
+
+@media (max-width: 991.98px) {
+    .navbar-main .navbar-nav { align-items: stretch; gap: 0; }
+    .navbar-main .nav-link { padding: .5rem .6rem; }
+    .page-head { align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}
+
+/* ── Vérification en deux étapes ───────────────────────────────────────── */
+
+.enroll-steps { margin: 0; padding-left: 1.25rem; }
+.enroll-steps > li { margin-bottom: 1.5rem; }
+.enroll-steps > li:last-child { margin-bottom: 0; }
+
+/* Le QR reste sur fond blanc quel que soit le thème : un lecteur de code
+   attend un contraste sombre-sur-clair, l'inverser le rend illisible. */
+.qr-frame {
+    display: inline-block;
+    margin-top: .75rem;
+    padding: .5rem;
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--vigil-radius-card, 7px);
+}
+
+.secret-key {
+    letter-spacing: .12em;
+    background: var(--bs-secondary-bg);
+    border-radius: var(--vigil-radius, 4px);
+}
+
+/* Le champ de code : chiffres larges et espacés, on relit avant de valider. */
+.code-input {
+    font-family: var(--bs-font-monospace);
+    font-size: 1.35rem;
+    letter-spacing: .35em;
+    text-align: center;
+    padding-block: .5rem;
+}
+
+.recovery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: .5rem;
+}
+
+.recovery-code {
+    display: block;
+    padding: .45rem .5rem;
+    text-align: center;
+    font-size: .95rem;
+    letter-spacing: .04em;
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--vigil-radius, 4px);
+}
+
+/* ── Bac à sable ──────────────────────────────────────────────────────── */
+
+.sandbox-journal { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.sandbox-journal li {
+    border-left: 2px solid var(--bs-border-color);
+    padding-left: .75rem;
+    font-size: .9rem;
+}
+.sandbox-data {
+    font-size: .75rem;
+    margin: .35rem 0 0;
+    padding: .5rem .65rem;
+    background: var(--bs-secondary-bg);
+    border-radius: var(--vigil-radius, 4px);
+    max-height: 12rem;
+    overflow: auto;
+}
+
+/* Le parcours du bac à sable : une chaîne, pas une liste de courses. */
+.parcours { counter-reset: etape; list-style: none; margin: 0; padding: 0; }
+.parcours > li {
+    counter-increment: etape;
+    position: relative;
+    padding: .35rem 0 .35rem 2.4rem;
+    border-left: 2px solid var(--bs-border-color);
+    margin-left: .9rem;
+}
+.parcours > li:first-child { border-left-color: transparent; }
+.parcours > li:last-child  { border-left-color: transparent; }
+.parcours > li::before {
+    content: counter(etape);
+    position: absolute;
+    left: -.9rem; top: .35rem;
+    width: 1.8rem; height: 1.8rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    font-family: var(--bs-font-monospace);
+    font-size: .8rem; font-weight: 600;
+}
+.parcours > li:first-child::before,
+.parcours > li:last-child::before {
+    background: var(--vigil-accent-wash, #eef0fe);
+    border-color: var(--bs-link-color);
+    color: var(--bs-link-color);
+}

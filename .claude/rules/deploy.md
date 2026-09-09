@@ -60,6 +60,9 @@ toutes la meme impression : « ca ne marche pas ».
       sont plus enregistrees. Le test en production se fait donc sur de vraies
       campagnes.
 - [ ] `composer install --no-dev --optimize-autoloader`
+- [ ] **Les assets** : `public/assets/dist/` n'est pas versionne. `init.sh` le
+      construit ; sinon `npm install && bash scripts/copy-assets.sh`. Sans cela,
+      404 sur `bootstrap.min.css` et back-office sans aucun style.
 - [ ] `vendor/bin/phinx migrate`
 - [ ] `php bin/task_runner.php Maintenance PartitionMaintenanceTask ensure`
       — sans partition, l'ingestion s'arrete au changement de mois

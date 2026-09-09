@@ -73,6 +73,45 @@ compteur, inactives en `text-muted`.
 Bascule dans le dropdown utilisateur (IDs `#themeToggle`, `#themeIcon`).
 Badges `bg-warning` en texte noir, rouge adouci (`#f87171`).
 
+## Assets : `src/` versionne, `dist/` genere
+
+```
+public/assets/src/    nos feuilles et scripts — VERSIONNES
+public/assets/dist/   servi par nginx — ENTIEREMENT GENERE, gitignore
+```
+
+`scripts/copy-assets.sh` construit `dist/` a partir de `node_modules/` (Bootstrap,
+Bootstrap Icons) **et** de `src/`. `init.sh` l'appelle, et verifie la presence des
+quatre fichiers attendus.
+
+**Ne jamais editer directement dans `dist/`** : le repertoire est gitignore, un
+fichier ecrit dedans n'existe que sur la machine qui l'a produit. C'est arrive —
+tout le systeme de design a vecu 36 Ko hors du depot, invisible, jusqu'a ce
+qu'un 404 sur `bootstrap-icons.css` en production le revele.
+
+## Purger les caches
+
+```bash
+./bin/cache-clear.sh            # Twig, APCu, OPcache
+./bin/cache-clear.sh --assets   # + reconstruction de dist/
+./bin/cache-clear.sh --all      # + Redis (demande confirmation)
+```
+
+Le script **redemarre `vigil_php`**, et c'est le seul moyen fiable : les trois
+caches vivent dans le processus PHP-FPM ou dans le systeme de fichiers du
+conteneur. En particulier, `apcu_clear_cache()` lance en CLI ne touche PAS la
+memoire partagee de PHP-FPM — c'est un autre processus, avec son propre segment.
+Un `docker exec ... php -r 'apcu_clear_cache();'` donnerait l'illusion d'avoir
+purge sans rien purger.
+
+Le redemarrage coute une a deux secondes d'indisponibilite : a eviter en pleine
+pointe. Le script attend que `/health` reponde avant de rendre la main, pour ne
+pas annoncer « purge terminee » sur un service encore en train de remonter.
+
+`--redis` demande confirmation : Redis ne porte pas que du cache, il tient les
+compteurs d'unicite des clics (24 h). Les vider fait recompter comme uniques des
+visiteurs deja venus, et gonfle les statistiques jusqu'au lendemain.
+
 ## Cache Twig
 
 En developpement, Twig **ne cache pas** : chaque requete recompile. C'est pour
