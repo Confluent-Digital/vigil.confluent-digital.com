@@ -36,6 +36,7 @@ else
 fi
 
 STEP=0
+FAILED=0
 step() { STEP=$((STEP + 1)); printf '\n%s[%d/%d]%s %s%s%s\n' "$C_BLUE" "$STEP" "$TOTAL_STEPS" "$C_RESET" "$C_BOLD" "$1" "$C_RESET"; }
 ok()   { printf '      %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$1"; }
 skip() { printf '      %s·%s %s\n' "$C_DIM" "$C_RESET" "$1"; }
@@ -166,6 +167,43 @@ step "Repertoires et ports"
 
 mkdir -p "$ROOT"/{cache/twig,logs/tasks,.docker-data/mariadb}
 touch "$ROOT/cache/.gitkeep" "$ROOT/logs/.gitkeep"
+
+# Quand `init.sh` n'a pas cree ces repertoires — parce qu'il a echoue plus tot,
+# ou parce qu'on a lance docker a la main — c'est DOCKER qui les cree, en root.
+# Le conteneur PHP tourne en $UID:$GID et ne peut alors plus y ecrire : le cache
+# Twig echoue, les journaux de tasks aussi, sans message clair. On le detecte
+# plutot que de laisser chercher.
+#
+# `.docker-data/mariadb` est exclu : il appartient legitimement a l'utilisateur
+# mysql du conteneur de base, pas au notre.
+CIBLE_UID="$(grep -E '^UID=' "$ROOT/.env" | cut -d= -f2)"
+CIBLE_UID="${CIBLE_UID:-$(id -u)}"
+
+# Deux accumulateurs distincts : la liste des chemins sert a construire la
+# commande de correction, les libelles ne servent qu'a l'affichage. Les melanger
+# produit un `chown` qui prend « (root:root) » pour un repertoire.
+CHEMINS_KO=""
+DETAILS_KO=""
+for d in cache cache/twig logs logs/tasks; do
+    # Le script tourne sous le meme compte que les conteneurs ($UID vient de
+    # `id -u`) : ce que lui ne peut pas ecrire, eux non plus.
+    if [ -e "$ROOT/$d" ] && [ ! -w "$ROOT/$d" ]; then
+        CHEMINS_KO="$CHEMINS_KO $ROOT/$d"
+        DETAILS_KO="$DETAILS_KO
+        $d — appartient a $(stat -c '%U:%G' "$ROOT/$d" 2>/dev/null), droits $(stat -c '%a' "$ROOT/$d" 2>/dev/null)"
+    fi
+done
+
+if [ -n "$CHEMINS_KO" ]; then
+    warn "repertoires non inscriptibles par l'utilisateur des conteneurs (UID $CIBLE_UID) :"
+    printf '%s\n' "$DETAILS_KO"
+    warn "  Le cache Twig et les journaux de tasks echoueront en silence."
+    warn "  Cela arrive quand Docker cree ces repertoires lui-meme, en root,"
+    warn "  parce qu'init.sh n'etait pas passe avant. Corrige avec :"
+    warn "      sudo chown -R $CIBLE_UID:$CIBLE_UID$CHEMINS_KO"
+    FAILED=1
+fi
+
 ok "cache/, logs/, .docker-data/"
 
 # Un port deja pris par un AUTRE projet fait echouer `up` avec un message
