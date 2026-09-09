@@ -266,4 +266,51 @@ final class RoundTripTest extends HttpTestCase
             'un mauvais secret ne doit rien creer de plus'
         );
     }
+
+    /**
+     * Une campagne sans client valide doit continuer a encaisser ses
+     * conversions.
+     *
+     * `campaign_id_client` est nullable et n'a pas de contrainte de cle
+     * etrangere. Une jointure INNER vers `t_client` faisait donc disparaitre la
+     * ligne entiere pour une campagne orpheline : `pb.php` repondait
+     * « campagne introuvable », rendait `200` au money site, et ne creait
+     * AUCUNE conversion. Panne silencieuse, visible seulement dans l'ecart de
+     * reporting — exactement ce que le projet cherche a eviter.
+     *
+     * Une campagne sans client perd le secret partage, rien d'autre.
+     */
+    public function testUneCampagneOrphelineEncaisseQuandMeme(): void
+    {
+        $ctx = $this->makeCampaign($this->baseUrl() . '/money?clickid={clickid}');
+
+        // On coupe le rattachement APRES coup : le formulaire l'interdit
+        // desormais, mais rien n'empeche une donnee ancienne d'etre dans cet
+        // etat, et c'est precisement le cas qu'on veut couvrir.
+        $this->pdo->prepare('UPDATE t_campaign SET campaign_id_client = 0 WHERE campaign_id = :i')
+            ->execute(['i' => $ctx['campaign_id']]);
+        \App\Core\CampaignCache::invalidate();
+
+        $r = $this->get('/c/' . $ctx['token'] . '?cid=ORPHELIN');
+        self::assertSame(302, $r['status'], 'le clic doit toujours rediriger');
+        parse_str((string) parse_url($r['headers']['location'], PHP_URL_QUERY), $q);
+        usleep(300000);
+
+        $reponse = $this->get(sprintf(
+            '/pb?clickid=%s&txid=TX-ORPHELIN&amount=5&s=%s',
+            $q['clickid'],
+            $ctx['secret']
+        ));
+
+        self::assertSame(200, $reponse['status']);
+        self::assertSame(
+            1,
+            $this->countRows(
+                't_conversion',
+                'conversion_id_campaign = :c',
+                ['c' => $ctx['campaign_id']]
+            ),
+            'la conversion doit etre enregistree malgre le client manquant'
+        );
+    }
 }

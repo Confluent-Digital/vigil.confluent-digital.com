@@ -90,6 +90,21 @@ final class CampaignsController
             $errors[] = 'Macros inconnues : {' . implode('}, {', $unknown) . '}.';
         }
 
+        // Le `required` du <select> ne vaut que dans le navigateur : un POST
+        // forge, ou une liste vide, passait avec `campaign_id_client = 0`. La
+        // campagne devenait orpheline — sans client, donc sans secret partage,
+        // et sans rien pour la rattacher a une facturation.
+        $clientId = (int) ($body['campaign_id_client'] ?? 0);
+        if ($clientId <= 0) {
+            $errors[] = 'Le client est obligatoire.';
+        } else {
+            $existe = $pdo->prepare('SELECT 1 FROM t_client WHERE client_id = :id');
+            $existe->execute(['id' => $clientId]);
+            if ($existe->fetchColumn() === false) {
+                $errors[] = 'Ce client n\'existe pas.';
+            }
+        }
+
         if ($errors !== []) {
             $clients = $pdo->query(
                 "SELECT client_id, client_name FROM t_client WHERE client_status != 'archived' ORDER BY client_name"
@@ -106,7 +121,7 @@ final class CampaignsController
         }
 
         $data = [
-            'client'   => (int) ($body['campaign_id_client'] ?? 0),
+            'client'   => $clientId,
             'name'     => $name,
             'status'   => in_array($body['campaign_status'] ?? '', ['active', 'paused', 'archived'], true)
                 ? $body['campaign_status'] : 'paused',

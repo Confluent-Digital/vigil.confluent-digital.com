@@ -116,12 +116,18 @@ try {
     }
 
     // ── 2. Campagne et authentification ─────────────────────────────────────
+    // LEFT JOIN, jamais INNER : `campaign_id_client` est nullable, et une
+    // campagne orpheline ferait disparaitre la ligne entiere. Le postback
+    // tomberait alors en « campagne introuvable » — un `200` rendu au money
+    // site, aucune conversion creee, et rien pour le signaler ailleurs que
+    // dans l'ecart de reporting. Une campagne sans client doit continuer a
+    // encaisser ses conversions ; elle perd seulement le secret partage.
     $stmt = $pdo->prepare(
         'SELECT c.campaign_id, c.campaign_name, c.campaign_payout, c.campaign_currency,
                 c.campaign_postback_secret, c.campaign_postback_ips, c.campaign_postback_response,
                 cl.client_postback_secret
            FROM t_campaign c
-           JOIN t_client cl ON cl.client_id = c.campaign_id_client
+      LEFT JOIN t_client cl ON cl.client_id = c.campaign_id_client
           WHERE c.campaign_id = :id LIMIT 1'
     );
     $stmt->execute(['id' => $click['click_id_campaign']]);

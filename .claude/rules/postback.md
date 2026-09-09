@@ -46,6 +46,48 @@ campagne, et le but meme de la carte est de transmettre l'URL au client. La
 regle de masquage porte sur les **listes**, ou le secret n'a aucune raison
 d'apparaitre.
 
+### Deux secrets : celui du client, celui de la campagne
+
+Le secret vivait uniquement sur la campagne. L'URL de base etait bien unique,
+mais le `&s=` differait d'une campagne a l'autre : le client se retrouvait a en
+configurer autant qu'avant. **Le probleme que Vigil resout reapparaissait un
+cran plus bas**, et cela ne se voit qu'au premier branchement a deux campagnes.
+
+`t_client.client_postback_secret` est genere a la creation d'un client, et
+`PostbackAuth::check()` accepte l'un **ou** l'autre. Le secret n'aiguille rien :
+c'est le clickid qui designe la campagne, il ne fait qu'attester l'origine de
+l'appel. Deux secrets valides ne creent donc aucune ambiguite.
+
+Les deux sont compares **sans court-circuit** (`hash_equals(...) || $ok`), pour
+que la duree de la reponse ne revele pas lequel a repondu.
+
+Le secret de campagne reste accepte : c'est l'exception negociee quand un
+annonceur veut cloisonner une campagne.
+
+Cloisonnement verifie : le secret d'un client n'ouvre jamais les campagnes d'un
+autre. La jointure ne ramene que le secret du proprietaire.
+
+### La jointure vers `t_client` est un LEFT JOIN, et doit le rester
+
+`campaign_id_client` est **nullable** et **sans contrainte de cle etrangere**.
+Une jointure INNER fait donc disparaitre la ligne entiere pour une campagne
+orpheline : `pb.php` repond « campagne introuvable », rend `200` au money site,
+et ne cree **aucune conversion**. Panne silencieuse, visible seulement dans
+l'ecart de reporting.
+
+Une campagne sans client doit continuer a encaisser ; elle perd seulement le
+secret partage. Verrouille par
+`RoundTripTest::testUneCampagneOrphelineEncaisseQuandMeme`, verifie rouge avec
+un INNER JOIN.
+
+La source est fermee en amont : `CampaignsController::save()` valide desormais
+`campaign_id_client` cote serveur — le `required` du `<select>` ne valait que
+dans le navigateur, et un POST forge passait avec `0`.
+
+Cout de la jointure : +0,0035 ms par postback, soit 0,17 % d'une requete de
+2 ms. Le chemin du **clic** n'est pas concerne : `CampaignCache` ne joint pas
+`t_client`.
+
 ### 1. Idempotence — la protection la plus importante du systeme
 
 `UNIQUE (conversion_id_campaign, conversion_external_txid)`.
