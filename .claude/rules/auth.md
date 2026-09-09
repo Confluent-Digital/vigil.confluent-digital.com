@@ -134,6 +134,52 @@ Regles qui en decoulent :
   entrees « Vigil : untel@… » cohabitent sans qu'on puisse dire laquelle est
   vivante, et l'ancienne rend des codes refuses.
 
+## Gerer les comptes : `bin/user.php`, pas du SQL
+
+```bash
+php bin/user.php list                          # qui a acces, et qui a configure son second facteur
+php bin/user.php create <email> [role]         # admin | manager | publisher
+php bin/user.php password <email>              # reinitialise, affiche une fois
+php bin/user.php email <ancien> <nouveau>      # renomme
+php bin/user.php disable|enable <email>
+```
+
+**Un mot de passe ne se retrouve pas.** Il est hache en bcrypt (cout 12) : il
+n'existe nulle part en clair, pas plus pour un administrateur que pour un
+attaquant qui lirait un dump. La seule operation possible est la
+reinitialisation, et le nouveau mot de passe s'affiche une seule fois.
+
+**Changer l'adresse ne casse pas la verification en deux etapes.** Le secret
+TOTP est rattache a `user_id`, pas a `user_email` : apres un renommage,
+l'application d'authentification continue de rendre des codes valides. Elle
+gardera l'ancienne adresse dans son libelle, sans consequence. Reconfigurer
+« pour mettre le libelle a jour » detruirait un enrolement valide — c'est
+exactement l'erreur qui a coute quatre enrolements.
+
+De meme, `password` **ne touche pas** au second facteur : les deux facteurs sont
+independants, c'est le principe.
+
+**Ne pas creer de compte par `INSERT` a la main** : le hachage, le role et les
+contraintes d'unicite y sont faciles a manquer, et un `user_password` mal forme
+donne un compte qui refuse toutes les connexions sans dire pourquoi.
+
+## `ADMIN_EMAIL` doit designer une boite reelle
+
+`AdminUserSeeder` lit `ADMIN_EMAIL` et retombe sur
+`admin@confluent-digital.com`. Cette variable est restee absente de
+`.env.example` pendant toute l'installation : la premiere mise en production
+s'est donc faite sur une adresse **qui n'existe pas**.
+
+Ce n'est pas cosmetique. `TwoFactor` envoie le code de repli a `user_email` :
+une adresse fictive ferme silencieusement le seul chemin de secours en cas de
+perte du telephone, et on ne s'en apercoit que le jour ou on en a besoin. Le
+meme envoi porte l'avertissement « repli utilise », qui est la seule alerte
+qu'une connexion s'est faite sans le second facteur.
+
+Toute variable lue par le code doit figurer dans `.env.example`, meme quand
+elle a un defaut : un defaut non documente n'est pas un choix, c'est un
+accident qui attend.
+
 ## Pieges
 
 - **Un handler de route Slim ne prend pas de parametre supplementaire.** Slim
