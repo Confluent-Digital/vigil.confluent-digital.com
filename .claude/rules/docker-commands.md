@@ -34,6 +34,23 @@ conf invalide couperait tous les sites de la machine, pas seulement Vigil.
 Repertoire de travail dans le conteneur PHP :
 `/data/www/vigil.confluent-digital.com` (identique au chemin hote).
 
+## Compose v1 ou v2
+
+`init.sh` accepte les deux : le plugin `docker compose` (v2) ou le binaire
+`docker-compose` (v1). Le paquet **`docker.io` d'Ubuntu ne fournit pas le
+plugin** — beaucoup de serveurs n'ont donc que v1, et le script s'y adapte
+plutot que de refuser de demarrer.
+
+Deux details qui different :
+
+- `docker compose ps --format '{{.Ports}}'` n'existe pas en v1 ; `compose_ports()`
+  lit la sortie brute dans ce cas.
+- v1 n'est plus maintenu depuis juillet 2023. `init.sh` le signale sans bloquer.
+  Pour passer au plugin : `sudo apt-get install -y docker-compose-v2`.
+
+Les commandes de ce document supposent v2 ; remplacez `docker compose` par
+`docker-compose` si c'est ce dont vous disposez.
+
 L'image PHP est **construite** a partir de l'image du parc
 (`docker-registry.confluent-digital.com/php:slim-8.3-fpm`), completee de
 **apcu** et **redis** — absentes de la base et indispensables au chemin chaud.

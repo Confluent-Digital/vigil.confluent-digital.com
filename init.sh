@@ -64,7 +64,7 @@ if [ "$DO_DOWN" -eq 1 ]; then
     printf '%sArret de la stack Vigil%s\n' "$C_BOLD" "$C_RESET"
     # Volontairement sans -v : les donnees MariaDB vivent dans .docker-data/,
     # mais un `down -v` supprimerait tout volume anonyme au passage.
-    docker compose down
+    $DC down
     printf '\n%s✓%s Conteneurs arretes. Les donnees de .docker-data/ sont conservees.\n\n' "$C_GREEN" "$C_RESET"
     exit 0
 fi
@@ -77,11 +77,37 @@ printf '%s╰──────────────────────�
 step "Prerequis"
 
 command -v docker >/dev/null 2>&1 || die "docker introuvable."
-docker compose version >/dev/null 2>&1 || die "'docker compose' (v2) introuvable."
 docker info >/dev/null 2>&1 || die "Le daemon Docker ne repond pas (droits sur /var/run/docker.sock ?)."
-ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') et compose v2"
+
+# Compose v2 (plugin `docker compose`) ou v1 (binaire `docker-compose`) : le
+# paquet `docker.io` d'Ubuntu ne fournit PAS le plugin, et beaucoup de serveurs
+# n'ont donc que le binaire v1. Les deux comprennent ce docker-compose.yml.
+if docker compose version >/dev/null 2>&1; then
+    DC="docker compose"
+    DC_VERSION="$(docker compose version --short 2>/dev/null || echo '?')"
+    DC_KIND="plugin v2"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DC="docker-compose"
+    DC_VERSION="$(docker-compose version --short 2>/dev/null || echo '?')"
+    DC_KIND="binaire v1"
+else
+    die "Ni 'docker compose' (plugin v2) ni 'docker-compose' (binaire v1) n'est installe.
+  Sur Ubuntu, le paquet docker.io ne fournit pas le plugin. Installez-le avec :
+      sudo apt-get install -y docker-compose-v2
+  ou, a defaut :
+      sudo apt-get install -y docker-compose"
+fi
+
+ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') et compose $DC_VERSION ($DC_KIND)"
+
+# Compose v1 n'est plus maintenu depuis juillet 2023 : il fonctionne ici, mais
+# on le signale plutot que de laisser decouvrir un ecart de comportement.
+if [ "$DC" = "docker-compose" ]; then
+    warn "compose v1 n'est plus maintenu — 'sudo apt-get install docker-compose-v2' quand ce sera possible"
 
 command -v openssl >/dev/null 2>&1 || die "openssl introuvable (necessaire pour generer les secrets)."
+fi
+
 ok "openssl"
 
 [ -f "$ROOT/docker-compose.yml" ] || die "docker-compose.yml absent — mauvais repertoire ?"
@@ -145,11 +171,21 @@ ok "cache/, logs/, .docker-data/"
 # Un port deja pris par un AUTRE projet fait echouer `up` avec un message
 # obscur ; on le dit tout de suite. Un port tenu par nos propres conteneurs
 # n'est pas un conflit.
+# `docker compose ps --format` n'existe pas en v1 : on lit la sortie brute, qui
+# contient de toute facon « 0.0.0.0:388->80/tcp ».
+compose_ports() {
+    if [ "$DC" = "docker compose" ]; then
+        docker compose ps --format '{{.Ports}}'
+    else
+        docker-compose ps
+    fi
+}
+
 port_conflict() {
     local port="$1" name="$2"
     command -v ss >/dev/null 2>&1 || return 0
     ss -Hltn "sport = :$port" 2>/dev/null | grep -q . || return 0
-    docker compose ps --format '{{.Ports}}' 2>/dev/null | grep -q ":$port->" && return 0
+    compose_ports 2>/dev/null | grep -q ":$port->" && return 0
     warn "port $port ($name) deja occupe par un autre processus"
     return 1
 }
@@ -196,8 +232,8 @@ MSG
 
     # Surcouche transitoire : apcu et redis tant que l'image du parc ne les
     # porte pas. Une fois `slim-8.3-fpm` republiee, le build ne fait plus rien.
-    docker compose build vigil_php >/dev/null 2>&1 \
-        || { docker compose build vigil_php; die "Echec du build de l'image PHP."; }
+    $DC build vigil_php >/dev/null 2>&1 \
+        || { $DC build vigil_php; die "Echec du build de l'image PHP."; }
     ok "vigil/php:8.3-fpm construite"
 else
     skip "build saute (--no-build)"
@@ -206,7 +242,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 step "Conteneurs"
 
-docker compose up -d >/dev/null 2>&1 || { docker compose up -d; die "Echec du demarrage."; }
+$DC up -d >/dev/null 2>&1 || { $DC up -d; die "Echec du demarrage."; }
 ok "vigil_database, vigil_redis, vigil_php, vigil_nginx demarres"
 
 printf '      %s·%s attente de MariaDB' "$C_DIM" "$C_RESET"
