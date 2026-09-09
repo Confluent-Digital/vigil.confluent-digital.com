@@ -509,7 +509,17 @@ document.getElementById('previewBtn')?.addEventListener('click', async () => {
 
     modal.addEventListener('show.bs.modal', (e) => {
         const btn = e.relatedTarget;
-        if (!btn) { return; }
+        // Sans bouton d'origine (ouverture programmatique), on VIDE au lieu de
+        // sortir : sortir laissait en place le lien du publisher precedent,
+        // pret a etre copie et transmis au mauvais partenaire.
+        if (!btn) {
+            base = '';
+            out.value = '';
+            copier.dataset.copy = '';
+            document.getElementById('genPublisher').textContent = '—';
+            note.textContent = '';
+            return;
+        }
         base = btn.dataset.lien;
         document.getElementById('genPublisher').textContent = btn.dataset.publisher;
         composer();
