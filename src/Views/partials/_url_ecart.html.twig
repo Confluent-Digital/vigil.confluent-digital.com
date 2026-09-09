@@ -1,0 +1,47 @@
+{# Ecart entre APP_URL et l'adresse consultee.
+
+   Deux causes tres differentes, et le conseil n'est pas le meme — c'est pour
+   cela que le bloc les distingue au lieu de proposer partout « posez
+   APP_URL = ce que vous voyez ». Ce conseil-la, applique en production a un
+   ecart de schema, ferait basculer en clair TOUS les liens de tracking deja
+   en circulation. #}
+{% if url_ecart %}
+{% set ecart_schema = url_ecart|replace({'http://': 'https://'}) == app_url %}
+<div class="alert alert-warning py-2 d-flex align-items-start gap-2">
+    <i class="bi bi-exclamation-triangle mt-1"></i>
+    <div class="small">
+        <strong>Les liens ci-dessous ne sont pas cliquables depuis ici.</strong>
+        Ils sont construits sur <code>{{ app_url }}</code> (valeur de <code>APP_URL</code>),
+        alors que vous naviguez sur <code>{{ url_ecart }}</code>.
+
+        {% if ecart_schema %}
+        <div class="mt-2">
+            Seul le <strong>schéma</strong> diffère : le domaine est le bon. Deux situations,
+            et surtout deux corrections opposées.
+            <ul class="mb-0 mt-1">
+                <li>
+                    <strong>Le site n'a pas de certificat.</strong> C'est le cas du vhost livré,
+                    qui n'écoute que sur le port 80. Posez alors du TLS devant — un lien de
+                    tracking part dans des e-mails, il n'a rien à faire en clair.
+                    <em>Ne rétrogradez pas <code>APP_URL</code> en <code>http</code></em> :
+                    tous les liens déjà en circulation basculeraient en clair.
+                </li>
+                <li>
+                    <strong>Le site est bien en HTTPS</strong>, mais le reverse proxy ne
+                    transmet pas <code>X-Forwarded-Proto</code>. Vigil lit alors
+                    <code>http</code> alors que le visiteur est en <code>https</code>.
+                    Ajoutez <code>proxy_set_header X-Forwarded-Proto $scheme;</code>
+                    au vhost de l'hôte.
+                </li>
+            </ul>
+        </div>
+        {% else %}
+        <div class="mt-2">
+            Le <strong>domaine</strong> diffère — c'est en général une machine de
+            développement. Posez <code>APP_URL={{ url_ecart }}</code> dans le
+            <code>.env</code>, puis <code>./bin/cache-clear.sh</code>.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

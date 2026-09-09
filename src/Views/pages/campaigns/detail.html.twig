@@ -17,17 +17,7 @@
     </div>
 </div>
 
-{% if url_ecart %}
-<div class="alert alert-warning py-2 d-flex align-items-start gap-2">
-    <i class="bi bi-exclamation-triangle mt-1"></i>
-    <div class="small">
-        <strong>Les liens ci-dessous ne sont pas cliquables depuis ici.</strong>
-        Ils sont construits sur <code>{{ app_url }}</code> (valeur de <code>APP_URL</code>),
-        alors que vous naviguez sur <code>{{ url_ecart }}</code>.
-        En développement, posez <code>APP_URL={{ url_ecart }}</code> dans le <code>.env</code>.
-    </div>
-</div>
-{% endif %}
+{% include 'partials/_url_ecart.html.twig' %}
 <div class="card mb-3">
     <div class="card-header"><i class="bi bi-box-arrow-up-right"></i> Destination</div>
     <div class="card-body">

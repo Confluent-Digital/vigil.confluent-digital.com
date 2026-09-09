@@ -99,6 +99,29 @@ publisher colle dans ses e-mails, le deduire du navigateur ferait copier
 | developpement | `http://dev.vigil.confluent-digital.com` — convention du parc, entree `/etc/hosts` vers 127.0.0.1, **HTTP** (pas de certificat) |
 | production | `https://vigil.confluent-digital.com` |
 
+### L'ecart de SCHEMA n'a pas la meme cause que l'ecart de DOMAINE
+
+L'avertissement du back-office disait, dans tous les cas, « posez
+`APP_URL = ce que vous voyez` ». Applique en production a un ecart de schema,
+ce conseil fait basculer en clair **tous les liens de tracking deja en
+circulation** — y compris ceux qui dorment dans des e-mails deja partis.
+
+| Ce qui differe | Cause probable | Correction |
+|---|---|---|
+| le **domaine** | machine de developpement | poser `APP_URL` sur le domaine consulte |
+| le **schema** seul | pas de TLS, ou `X-Forwarded-Proto` absent | poser du TLS, ou corriger le relai — **jamais** retrograder `APP_URL` |
+
+**Le vhost livre n'ecoute que sur le port 80.** Un `APP_URL` en `https` — la
+valeur correcte en production — ne peut donc pas correspondre tant qu'un
+terminaison TLS n'est pas posee devant.
+
+Et quand elle l'est, Vigil doit encore lire le bon schema : le nginx de l'hote
+relaie **en clair** vers le conteneur, donc PHP voit `http` meme pour un
+visiteur en `https`. `AppUrl::fromRequest()` lit `X-Forwarded-Proto`, mais
+**uniquement depuis une adresse privee ou la boucle locale** : c'est un en-tete
+qu'un client peut forger, et le seul emetteur legitime est le relai du meme
+hote. Verrouille par `tests/Unit/AppUrlTest`.
+
 Une valeur pointant vers un domaine hors ligne produit des liens sur lesquels
 personne ne peut cliquer, **sans aucune erreur visible**. Deux garde-fous :
 
