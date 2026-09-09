@@ -117,9 +117,12 @@ try {
 
     // ── 2. Campagne et authentification ─────────────────────────────────────
     $stmt = $pdo->prepare(
-        'SELECT campaign_id, campaign_name, campaign_payout, campaign_currency,
-                campaign_postback_secret, campaign_postback_ips, campaign_postback_response
-           FROM t_campaign WHERE campaign_id = :id LIMIT 1'
+        'SELECT c.campaign_id, c.campaign_name, c.campaign_payout, c.campaign_currency,
+                c.campaign_postback_secret, c.campaign_postback_ips, c.campaign_postback_response,
+                cl.client_postback_secret
+           FROM t_campaign c
+           JOIN t_client cl ON cl.client_id = c.campaign_id_client
+          WHERE c.campaign_id = :id LIMIT 1'
     );
     $stmt->execute(['id' => $click['click_id_campaign']]);
     $campaign = $stmt->fetch();

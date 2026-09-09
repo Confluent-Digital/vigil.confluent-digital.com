@@ -50,6 +50,50 @@
         <a class="btn btn-link" href="/app/clients">Annuler</a>
     </div>
 </form>
+
+{% if client.client_postback_secret|default('') %}
+{% set pb_url = base_url ~ '/pb?clickid=CLICKID&amount=MONTANT&s=' ~ client.client_postback_secret %}
+<div class="mt-4 pt-3 border-top">
+    <h2 class="h6 mb-2"><i class="bi bi-arrow-return-left"></i> Le postback unique de ce client</h2>
+    <p class="text-muted small mb-2">
+        Une seule URL à lui transmettre, valable pour
+        <strong>{{ nb_campaigns }} campagne{{ nb_campaigns > 1 ? 's' : '' }}</strong> —
+        et pour toutes celles qu'on lui ouvrira ensuite, sans rien changer chez lui.
+        C'est le <code>clickid</code> qui désigne la campagne ; le secret ne fait
+        qu'attester que l'appel vient bien de son money site.
+    </p>
+
+    <div class="input-group input-group-sm mb-2">
+        <input class="form-control font-monospace" readonly value="{{ pb_url }}"
+               aria-label="URL de postback du client">
+        <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ pb_url }}"
+                title="Copier l'URL" aria-label="Copier l'URL"><i class="bi bi-clipboard"></i></button>
+    </div>
+
+    <p class="text-muted small mb-2">
+        <code>CLICKID</code> et <code>MONTANT</code> sont à remplacer par les variables de son
+        money site. Le détail des paramètres acceptés figure sur chaque fiche campagne.
+    </p>
+
+    <form method="post" action="/app/clients/{{ client.client_id }}/secret" class="d-inline"
+          onsubmit="return confirm('Régénérer le secret ? Tous les postbacks de ce client seront refusés tant qu\'il n\'aura pas mis à jour son money site — et Vigil répondra 200, donc rien ne le lui signalera.')">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button class="btn btn-outline-danger btn-xs" type="submit"
+                title="À n'utiliser que si le secret a fuité">Régénérer le secret</button>
+    </form>
+</div>
+{% elseif client %}
+<div class="alert alert-warning mt-4 py-2 small">
+    <i class="bi bi-shield-exclamation"></i>
+    <strong>Ce client n'a pas de secret partagé.</strong> Ses campagnes acceptent donc
+    n'importe quel postback : qui connaît un <code>clickid</code> peut créer une conversion,
+    qui sera relayée puis facturée.
+    <form method="post" action="/app/clients/{{ client.client_id }}/secret" class="d-inline">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button class="btn btn-warning btn-xs ms-2" type="submit">En générer un</button>
+    </form>
+</div>
+{% endif %}
 </div>
 </div>
 </div>

@@ -59,6 +59,7 @@ return static function (App $app): void {
         $g->get('/clients/{id:[0-9]+}/edit', [ClientsController::class, 'form']);
         $g->post('/clients/{id:[0-9]+}/edit', [ClientsController::class, 'save']);
         $g->post('/clients/{id:[0-9]+}/delete', [ClientsController::class, 'delete']);
+        $g->post('/clients/{id:[0-9]+}/secret', [ClientsController::class, 'regenerateSecret']);
 
         $g->get('/publishers', [PublishersController::class, 'index']);
         $g->get('/publishers/add', [PublishersController::class, 'form']);

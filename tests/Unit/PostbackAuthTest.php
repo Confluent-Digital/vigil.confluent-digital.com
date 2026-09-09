@@ -89,4 +89,50 @@ final class PostbackAuthTest extends TestCase
     {
         self::assertSame($attendu, PostbackAuth::ipAllowed($ip, $cidr));
     }
+
+    /**
+     * Le coeur du produit : **un seul postback pour toutes les campagnes d'un
+     * client**. Le secret vivait uniquement sur la campagne, donc le `&s=`
+     * differait de l'une a l'autre et le client se retrouvait a en configurer
+     * autant qu'avant — le probleme qu'on resout reapparaissait un cran plus
+     * bas.
+     */
+    public function testLeSecretDuClientVautPourToutesSesCampagnes(): void
+    {
+        $secretClient = 'cli-' . bin2hex(random_bytes(8));
+
+        $campagneA = ['campaign_postback_secret' => null, 'client_postback_secret' => $secretClient];
+        $campagneB = ['campaign_postback_secret' => null, 'client_postback_secret' => $secretClient];
+
+        self::assertTrue(PostbackAuth::check($campagneA, $secretClient, '1.2.3.4'));
+        self::assertTrue(PostbackAuth::check($campagneB, $secretClient, '1.2.3.4'));
+        self::assertIsString(PostbackAuth::check($campagneA, 'autre-chose', '1.2.3.4'));
+    }
+
+    /**
+     * Le secret de campagne reste accepte : c'est l'exception negociee, quand
+     * un annonceur veut cloisonner une campagne. Les deux ouvrent.
+     */
+    public function testLeSecretDeCampagneResteAccepteAcoteDeCeluiDuClient(): void
+    {
+        $campagne = [
+            'campaign_postback_secret' => 'propre-a-la-campagne',
+            'client_postback_secret'   => 'commun-au-client',
+        ];
+
+        self::assertTrue(PostbackAuth::check($campagne, 'propre-a-la-campagne', '1.2.3.4'));
+        self::assertTrue(PostbackAuth::check($campagne, 'commun-au-client', '1.2.3.4'));
+        self::assertIsString(PostbackAuth::check($campagne, '', '1.2.3.4'));
+        self::assertIsString(PostbackAuth::check($campagne, null, '1.2.3.4'));
+    }
+
+    /** Sans aucun secret ni filtre d'IP, on laisse passer — mais c'est une anomalie. */
+    public function testAucunControleLaissePasser(): void
+    {
+        self::assertTrue(PostbackAuth::check(
+            ['campaign_postback_secret' => null, 'client_postback_secret' => null],
+            null,
+            '1.2.3.4'
+        ));
+    }
 }

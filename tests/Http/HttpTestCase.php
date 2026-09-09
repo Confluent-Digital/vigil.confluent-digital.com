@@ -90,10 +90,21 @@ abstract class HttpTestCase extends TestCase
         $suffix = substr(bin2hex(random_bytes(4)), 0, 8);
         $secret = 'sec' . $suffix;
 
-        $this->pdo->prepare('INSERT INTO t_client (client_name) VALUES (:n)')
-            ->execute(['n' => self::MARQUEUR . $suffix]);
-        $clientId = (int) $this->pdo->lastInsertId();
-        $this->aNettoyer['client'][] = $clientId;
+        // `client_id` permet de rattacher plusieurs campagnes au MEME client —
+        // c'est la configuration reelle du produit, et celle qui exerce le
+        // secret de postback partage.
+        if (isset($overrides['client_id'])) {
+            $clientId = (int) $overrides['client_id'];
+        } else {
+            $this->pdo->prepare(
+                'INSERT INTO t_client (client_name, client_postback_secret) VALUES (:n, :s)'
+            )->execute([
+                'n' => self::MARQUEUR . $suffix,
+                's' => $overrides['client_secret'] ?? null,
+            ]);
+            $clientId = (int) $this->pdo->lastInsertId();
+            $this->aNettoyer['client'][] = $clientId;
+        }
 
         $this->pdo->prepare('INSERT INTO t_publisher (publisher_name, publisher_token) VALUES (:n, :t)')
             ->execute(['n' => self::MARQUEUR . $suffix, 't' => 'pu' . $suffix]);
@@ -110,7 +121,9 @@ abstract class HttpTestCase extends TestCase
             'n' => self::MARQUEUR . $suffix,
             's' => $overrides['status'] ?? 'active',
             'u' => $destUrl,
-            'k' => $overrides['secret'] ?? $secret,
+            // `false` (et non `null`) pour demander explicitement AUCUN secret de
+            // campagne : `null` serait avale par le `??`.
+            'k' => ($overrides['secret'] ?? $secret) === false ? null : ($overrides['secret'] ?? $secret),
         ]);
         $campaignId = (int) $this->pdo->lastInsertId();
         $this->aNettoyer['campaign'][] = $campaignId;
@@ -129,7 +142,14 @@ abstract class HttpTestCase extends TestCase
         $this->get('/health');
         \App\Core\CampaignCache::invalidate();
 
-        return ['token' => $token, 'secret' => $overrides['secret'] ?? $secret, 'campaign_id' => $campaignId];
+        return [
+            'token'       => $token,
+            'secret'      => ($overrides['secret'] ?? $secret) === false
+                ? (string) ($overrides['client_secret'] ?? '')
+                : ($overrides['secret'] ?? $secret),
+            'campaign_id' => $campaignId,
+            'client_id'   => $clientId,
+        ];
     }
 
     protected function countRows(string $table, string $where = '1', array $args = []): int

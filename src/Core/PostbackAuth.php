@@ -19,20 +19,37 @@ final class PostbackAuth
      */
     public static function check(array $campaign, ?string $providedSecret, ?string $ip): true|string
     {
-        $secret = (string) ($campaign['campaign_postback_secret'] ?? '');
-        $ips    = trim((string) ($campaign['campaign_postback_ips'] ?? ''));
+        // Deux secrets sont acceptes, et c'est voulu : celui du CLIENT vaut pour
+        // toutes ses campagnes — c'est lui qui permet de ne lui donner qu'une
+        // seule URL de postback, l'objet meme de Vigil. Celui de la CAMPAGNE
+        // reste accepte comme exception, quand un annonceur veut cloisonner.
+        //
+        // Le secret n'aiguille rien : c'est le clickid qui designe la campagne.
+        // Il ne fait qu'attester que l'appel vient bien du money site, donc
+        // deux secrets valides pour un meme appel ne creent pas d'ambiguite.
+        $secrets = array_values(array_filter([
+            (string) ($campaign['campaign_postback_secret'] ?? ''),
+            (string) ($campaign['client_postback_secret'] ?? ''),
+        ], static fn (string $v): bool => $v !== ''));
 
-        if ($secret === '' && $ips === '') {
+        $ips = trim((string) ($campaign['campaign_postback_ips'] ?? ''));
+
+        if ($secrets === [] && $ips === '') {
             // Campagne sans aucun controle : on laisse passer pour ne pas
             // casser un branchement en cours, mais c'est une anomalie que le
             // back-office doit signaler en alerte.
             return true;
         }
 
-        if ($secret !== '') {
+        if ($secrets !== []) {
             // hash_equals et jamais === : une comparaison a temps variable
-            // laisse deviner le secret octet par octet.
-            if ($providedSecret === null || !hash_equals($secret, $providedSecret)) {
+            // laisse deviner le secret octet par octet. On les teste TOUS, sans
+            // court-circuit, pour que la duree ne revele pas lequel a repondu.
+            $ok = false;
+            foreach ($secrets as $attendu) {
+                $ok = hash_equals($attendu, (string) $providedSecret) || $ok;
+            }
+            if (!$ok) {
                 return 'secret invalide';
             }
         }

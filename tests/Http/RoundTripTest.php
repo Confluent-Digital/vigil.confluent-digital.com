@@ -204,4 +204,66 @@ final class RoundTripTest extends HttpTestCase
             'les deux campagnes ne doivent pas recevoir le meme identifiant'
         );
     }
+
+    /**
+     * Le cas d'usage qui justifie le produit, de bout en bout : **un seul
+     * secret pour tout un client**, quel que soit le nombre de campagnes.
+     *
+     * Sans secret au niveau du client, le `&s=` differait d'une campagne a
+     * l'autre : le money site devait en configurer un par campagne, ce qu'il ne
+     * sait justement pas faire. On avait deplace le probleme, pas resolu.
+     */
+    public function testUnSeulSecretDeClientOuvreToutesSesCampagnes(): void
+    {
+        $secretClient = 'cli' . bin2hex(random_bytes(8));
+
+        // Campagne A cree le client ; campagne B s'y rattache. Aucune des deux
+        // n'a de secret propre : seul celui du client peut ouvrir.
+        $a = $this->makeCampaign(
+            $this->baseUrl() . '/money?clickid={clickid}',
+            ['secret' => false, 'client_secret' => $secretClient]
+        );
+        $b = $this->makeCampaign(
+            $this->baseUrl() . '/money?clickid={clickid}',
+            ['secret' => false, 'client_id' => $a['client_id']]
+        );
+
+        foreach ([['A', $a], ['B', $b]] as [$nom, $ctx]) {
+            $r = $this->get('/c/' . $ctx['token'] . '?cid=EXT-' . $nom);
+            parse_str((string) parse_url($r['headers']['location'], PHP_URL_QUERY), $q);
+            usleep(300000);
+
+            // Le MEME secret, pour les deux campagnes.
+            $this->get(sprintf(
+                '/pb?clickid=%s&txid=TX-%s&amount=9&s=%s',
+                $q['clickid'],
+                $nom,
+                $secretClient
+            ));
+
+            self::assertSame(
+                1,
+                $this->countRows(
+                    't_conversion',
+                    'conversion_id_campaign = :c',
+                    ['c' => $ctx['campaign_id']]
+                ),
+                "la campagne $nom doit avoir enregistre sa conversion avec le secret du client"
+            );
+        }
+
+        // Et un secret qui n'est ni celui du client ni celui d'une campagne
+        // reste refuse — le partage ne doit pas devenir une porte ouverte.
+        $r = $this->get('/c/' . $a['token'] . '?cid=EXT-REFUS');
+        parse_str((string) parse_url($r['headers']['location'], PHP_URL_QUERY), $q);
+        usleep(300000);
+
+        $this->get("/pb?clickid={$q['clickid']}&txid=TX-REFUS&amount=9&s=mauvais");
+
+        self::assertSame(
+            1,
+            $this->countRows('t_conversion', 'conversion_id_campaign = :c', ['c' => $a['campaign_id']]),
+            'un mauvais secret ne doit rien creer de plus'
+        );
+    }
 }
