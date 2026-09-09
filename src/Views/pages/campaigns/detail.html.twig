@@ -36,6 +36,115 @@
     </div>
 </div>
 
+{# ── Postback entrant : l'URL a donner au client ───────────────────────── #}
+{% set pb_secret = campaign.campaign_postback_secret|default('') %}
+{% set pb_url = base_url ~ '/pb?clickid=CLICKID&txid=TXID&status=approved'
+                ~ (pb_secret ? '&s=' ~ pb_secret : '') %}
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-arrow-return-left"></i> Postback entrant — l'URL à donner au client</div>
+    <div class="card-body">
+
+        <p class="text-muted small mb-2">
+            C'est le <strong>seul</strong> postback que le client configure chez lui, quel que soit
+            le nombre de campagnes qui pointent vers son money site. Vigil reconnaît la campagne
+            grâce au <code>clickid</code>, puis relaie vers les destinations ci-dessous.
+        </p>
+
+        <div class="input-group input-group-sm mb-2">
+            <input class="form-control font-monospace" readonly value="{{ pb_url }}"
+                   aria-label="URL de postback de la campagne">
+            <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ pb_url }}"
+                    title="Copier l'URL" aria-label="Copier l'URL"><i class="bi bi-clipboard"></i></button>
+        </div>
+
+        <p class="small mb-3">
+            <code>CLICKID</code> et <code>TXID</code> sont à remplacer par les variables
+            <strong>du money site</strong>, pas par des macros Vigil : il substitue les siennes
+            avant de nous appeler.
+        </p>
+
+        {% if '{clickid}' not in campaign.campaign_dest_url|default('') %}
+        <div class="alert alert-danger d-flex align-items-start gap-2 py-2 small mb-3">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+            <div>
+                <strong>La destination ne transmet pas <code>{clickid}</code>.</strong>
+                Le money site n'aura donc rien à nous renvoyer, et aucun postback ne pourra être
+                rattaché à un clic. Ajoutez la macro à l'URL de destination.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not pb_secret %}
+        <div class="alert alert-warning d-flex align-items-start gap-2 py-2 small mb-3">
+            <i class="bi bi-shield-exclamation"></i>
+            <div>
+                <strong>Aucun secret partagé.</strong> N'importe qui connaissant un
+                <code>clickid</code> peut créer une conversion — qui sera relayée et facturée.
+                <a href="/app/campaigns/{{ campaign.campaign_id }}/edit">En définir un</a>.
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="table-responsive">
+        <table class="table table-sm align-middle mb-2">
+            <thead><tr><th>Paramètre</th><th>Obligatoire</th><th>Rôle</th></tr></thead>
+            <tbody class="small">
+                <tr>
+                    <td class="font-monospace">clickid</td>
+                    <td><span class="badge text-bg-danger">oui</span></td>
+                    <td>L'identifiant que Vigil a transmis au money site lors de la redirection.
+                        Alias acceptés : <code>click_id</code>, <code>cid</code>.</td>
+                </tr>
+                <tr>
+                    <td class="font-monospace">s</td>
+                    <td>{% if pb_secret %}<span class="badge text-bg-danger">oui</span>{% else %}<span class="badge text-bg-secondary">non défini</span>{% endif %}</td>
+                    <td>Le secret partagé. Sans lui, la conversion est <strong>refusée</strong> —
+                        mais Vigil répond quand même <code>{{ campaign.campaign_postback_response|default('OK') }}</code>,
+                        donc le branchement a l'air réussi. Les refus sont listés sur
+                        <a href="/app/dead-links">Liens morts</a>. Alias : <code>secret</code>.</td>
+                </tr>
+                <tr>
+                    <td class="font-monospace">txid</td>
+                    <td><span class="badge text-bg-warning">fortement conseillé</span></td>
+                    <td>La référence de transaction du client. C'est elle qui rend l'appel
+                        idempotent : cinq envois du même <code>txid</code> ne font qu'une
+                        conversion. Sans elle, on retombe sur une conversion par clic — donc
+                        une seule vente possible par visiteur. Alias :
+                        <code>transaction_id</code>, <code>order_id</code>.</td>
+                </tr>
+                <tr>
+                    <td class="font-monospace">status</td>
+                    <td><span class="badge text-bg-secondary">non</span></td>
+                    <td><code>approved</code> par défaut. Aussi : <code>pending</code>,
+                        <code>rejected</code>, <code>chargeback</code>. Un second appel avec un
+                        statut différent met la conversion à jour et redéclenche le relai.</td>
+                </tr>
+                <tr>
+                    <td class="font-monospace">payout</td>
+                    <td><span class="badge text-bg-secondary">non</span></td>
+                    <td>Montant. À défaut, le payout de la campagne
+                        ({{ campaign.campaign_payout|money(campaign.campaign_currency) }}).</td>
+                </tr>
+                <tr>
+                    <td class="font-monospace">revenue</td>
+                    <td><span class="badge text-bg-secondary">non</span></td>
+                    <td>Chiffre d'affaires côté client, pour la marge. <code>0</code> par défaut.</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+
+        <p class="text-muted small mb-0">
+            <code>GET</code> ou <code>POST</code>, les deux sont acceptés. La réponse est
+            <strong>toujours</strong> <code>200</code>, y compris en cas de refus : un money site
+            qui verrait une erreur retenterait, ou couperait le tunnel de paiement.
+            {% if campaign.campaign_postback_ips %}
+            Appels restreints aux IP <code>{{ campaign.campaign_postback_ips }}</code>.
+            {% endif %}
+        </p>
+    </div>
+</div>
+
 {# ── Liens publishers ──────────────────────────────────────────────────── #}
 <div class="card mb-3 card-table">
     <div class="card-header justify-content-between">

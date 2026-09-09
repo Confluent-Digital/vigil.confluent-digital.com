@@ -20,6 +20,32 @@ demultiplexage se fait ici.
 | `status` | non | `pending` / `approved` / `rejected` / `chargeback` (defaut `approved`) |
 | `s` | selon campagne | signature ou secret partage |
 
+Les alias sont acceptes parce qu'un money site n'est pas toujours
+configurable : `clickid` / `click_id` / `cid`, et `txid` / `transaction_id` /
+`order_id`.
+
+### Ou la trouver dans le back-office
+
+**Fiche campagne, carte « Postback entrant »** : l'URL est assemblee avec le
+secret de la campagne, prete a copier, avec le tableau des parametres.
+
+Elle n'y figurait pas au depart — on la reconstituait de tete a chaque
+branchement, avec le risque d'oublier `&s=`. Or l'oubli du secret ne produit
+aucune erreur visible (`200` rendu quand meme) : c'est la cause la plus
+frequente d'un premier branchement qui « ne remonte rien ».
+
+La carte signale les deux configurations qui echouent en silence :
+
+- **la destination ne contient pas `{clickid}`** — le money site n'a alors rien
+  a nous renvoyer, et aucun postback ne peut etre rattache a un clic ;
+- **la campagne n'a pas de secret partage** — n'importe qui connaissant un
+  clickid peut forger une conversion, qui sera relayee puis facturee.
+
+Le secret est affiche en clair : c'est un ecran d'administration d'une seule
+campagne, et le but meme de la carte est de transmettre l'URL au client. La
+regle de masquage porte sur les **listes**, ou le secret n'a aucune raison
+d'apparaitre.
+
 ### 1. Idempotence — la protection la plus importante du systeme
 
 `UNIQUE (conversion_id_campaign, conversion_external_txid)`.
