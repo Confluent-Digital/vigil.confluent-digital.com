@@ -1,0 +1,88 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Configurer la vérification{% endblock %}
+{% block content %}
+<div class="login" style="max-width:34rem">
+    <div class="login-brand">
+        <span class="brand-mark"><i class="bi bi-shield-lock"></i></span>
+        <div class="login-name">Vérification en deux étapes</div>
+        <p class="login-tagline">Obligatoire — une seule configuration à faire</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger mb-3">
+                <div class="fw-semibold mb-1">
+                    <i class="bi bi-x-circle"></i> Ce code n'a pas été accepté.
+                </div>
+                <p class="small mb-1">Trois causes, par ordre de fréquence :</p>
+                <ol class="small mb-0 ps-3">
+                    <li>
+                        <strong>Vous lisez une ancienne entrée.</strong> Si votre application
+                        contient déjà un « {{ issuer }} » d'un enrôlement précédent, ses codes
+                        ne valent plus rien. Utilisez celle qui porte la date du jour, ou
+                        supprimez l'ancienne.
+                    </li>
+                    <li>
+                        <strong>Le code a expiré</strong> — il change toutes les 30 secondes.
+                        Attendez le suivant et saisissez-le aussitôt.
+                    </li>
+                    <li>
+                        <strong>L'heure de votre téléphone est décalée.</strong> Réglez-la sur
+                        automatique : le code se calcule à partir de l'heure.
+                    </li>
+                </ol>
+            </div>
+            {% endif %}
+
+            <p class="text-muted small mb-3">
+                Le back-office permet de modifier la destination d'une campagne et de lire les
+                secrets de postback. Un mot de passe seul ne suffit pas à protéger ça.
+            </p>
+
+            <ol class="enroll-steps">
+                <li>
+                    <strong>Scannez ce code</strong> avec votre application d'authentification
+                    (Google Authenticator, 1Password, Bitwarden, Aegis…).
+                    <div class="qr-frame">{{ qr_svg|raw }}</div>
+                    <details class="mt-2">
+                        <summary class="small text-muted">Impossible de scanner ?</summary>
+                        <p class="small mb-1 mt-2">Saisissez cette clé à la main dans l'application :</p>
+                        <code class="d-block p-2 text-center secret-key">{{ secret_display }}</code>
+                        <p class="small text-muted mb-0 mt-1">
+                            Compte : {{ user_email }} · Émetteur : {{ issuer }}
+                        </p>
+                    </details>
+                    <p class="small text-muted mt-2 mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Dans votre application, la nouvelle entrée s'appellera
+                        <code>{{ issuer }} : {{ user_email }} {{ "now"|date("Y-m-d") }}</code>.
+                        Une entrée plus ancienne sans cette date ne fonctionne plus :
+                        supprimez-la pour éviter de vous tromper.
+                    </p>
+                </li>
+                <li>
+                    <strong>Saisissez le code affiché</strong> par l'application pour confirmer.
+                    <form method="post" action="/login/enroll" class="mt-2">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <div class="d-flex gap-2">
+                            <input class="form-control code-input" name="code" inputmode="numeric"
+                                   autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"
+                                   placeholder="000000" required autofocus>
+                            <button class="btn btn-primary" type="submit">Confirmer</button>
+                        </div>
+                        <div class="form-text">
+                            Le code change toutes les 30 secondes. S'il est refusé, vérifiez que
+                            l'heure de votre téléphone est réglée automatiquement.
+                        </div>
+                    </form>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <p class="text-center mt-3">
+        <a class="small text-muted" href="/logout">Se déconnecter</a>
+    </p>
+</div>
+{% endblock %}

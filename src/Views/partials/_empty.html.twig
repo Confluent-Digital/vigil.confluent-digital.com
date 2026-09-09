@@ -1,0 +1,19 @@
+{# Etat vide partage. Un ecran vide doit dire quoi faire ensuite, pas
+   « aucune donnee » : un titre qui nomme la situation, une phrase qui explique
+   la consequence, et le bouton de l'action suivante.
+   Parametres : icon, title, text, cta_url, cta_label, cta_icon,
+                alt_url, alt_label. #}
+<div class="empty">
+    <span class="empty-icon"><i class="bi bi-{{ icon|default('inbox') }}"></i></span>
+    <div class="empty-title">{{ title }}</div>
+    <p class="empty-text">{{ text }}</p>
+    {% if cta_url|default('') %}
+        <div class="empty-actions">
+            <a class="btn btn-primary btn-sm" href="{{ cta_url }}">
+                <i class="bi bi-{{ cta_icon|default('plus-lg') }}"></i> {{ cta_label }}</a>
+            {% if alt_url|default('') %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ alt_url }}">{{ alt_label }}</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>

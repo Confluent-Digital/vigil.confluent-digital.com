@@ -1,0 +1,70 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Relais{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Journal des relais S2S</h1>
+        <div class="page-sub">{{ queue|length }} ligne(s) affichée(s) · heures en Europe/Paris</div>
+    </div>
+    <form class="filter-bar" method="get">
+        <label class="filter">
+            <span class="filter-label">Statut</span>
+            <select class="form-select form-select-sm" name="status" onchange="this.form.submit()"
+                    aria-label="Filtrer par statut de relai">
+                <option value="">Tous</option>
+                {% for s in ['pending', 'sent', 'failed', 'abandoned'] %}
+                    <option value="{{ s }}" {{ status == s ? 'selected' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </form>
+</div>
+
+<p class="screen-note">
+    Le code HTTP et le corps de réponse sont conservés à <strong>chaque</strong> tentative, succès comme échec.
+    C'est la seule preuve utilisable le jour où un partenaire conteste.
+</p>
+
+<div class="card card-table">
+<div class="table-responsive table-scroll">
+<table class="table table-sm table-hover mb-0">
+    <thead><tr>
+        <th class="text-end">#</th><th>Destination</th><th>Campagne</th><th>Txid</th><th>URL appelée</th>
+        <th>Statut</th><th class="text-end">Tent.</th><th class="text-end">HTTP</th><th>Réponse</th><th>Prochain essai</th>
+    </tr></thead>
+    <tbody>
+    {% for q in queue %}
+        <tr>
+            <td class="text-end text-muted">{{ q.pq_id }}</td>
+            <td class="fw-semibold">{{ q.cpb_name|default('—') }}</td>
+            <td>{{ q.campaign_name|default('—') }}</td>
+            <td><code class="small">{{ q.conversion_external_txid|default('—') }}</code></td>
+            <td style="max-width:26rem"><code class="small text-break">{{ q.pq_url }}</code></td>
+            <td>
+                {% set m = {'sent': 'success', 'pending': 'secondary', 'failed': 'warning', 'abandoned': 'danger'} %}
+                <span class="badge text-bg-{{ m[q.pq_status]|default('light') }}">{{ q.pq_status }}</span>
+            </td>
+            <td class="text-end">{{ q.pq_attempts }}</td>
+            <td class="text-end">{{ q.pq_http_code|default('—') }}</td>
+            <td style="max-width:16rem" class="text-truncate small text-muted"
+                title="{{ q.pq_response|default(q.pq_error)|default('') }}">
+                {{ q.pq_response|default(q.pq_error)|default('—') }}</td>
+            <td class="text-nowrap small">{{ q.pq_status == 'pending' ? q.pq_next_try_at|paris('d/m H:i') : '—' }}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="10">
+            {% include 'partials/_empty.html.twig' with {
+                'icon': 'arrow-repeat',
+                'title': 'Aucun relai enregistré',
+                'text': "Un relai est mis en file dès qu'une conversion tombe sur une campagne qui a au moins une destination S2S. Tant qu'aucune destination n'est configurée, les conversions sont enregistrées mais relayées nulle part.",
+                'cta_url': '/app/campaigns',
+                'cta_label': 'Configurer une destination de relai',
+                'cta_icon': 'sliders'
+            } only %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

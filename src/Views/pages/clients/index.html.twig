@@ -1,0 +1,52 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Clients{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Clients</h1>
+        <div class="page-sub">L'annonceur qui porte les offres · {{ clients|length }} enregistré(s)</div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary btn-sm" href="/app/clients/add"><i class="bi bi-plus-lg"></i> Nouveau client</a>
+    </div>
+</div>
+<div class="card card-table">
+<div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+    <thead><tr>
+        <th>Nom</th><th>Contact</th><th class="text-end">Campagnes</th><th>Statut</th><th class="text-end">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for c in clients %}
+        <tr>
+            <td class="fw-semibold">{{ c.client_name }}</td>
+            <td class="text-muted">{{ c.client_contact_email|default('—') }}</td>
+            <td class="text-end" data-order="{{ c.nb_campaigns }}">{{ c.nb_campaigns }}</td>
+            <td><span class="badge text-bg-{{ c.client_status == 'active' ? 'success' : (c.client_status == 'paused' ? 'warning' : 'secondary') }}">{{ c.client_status }}</span></td>
+            <td class="text-end text-nowrap">
+                <a class="btn btn-outline-secondary btn-xs" href="/app/clients/{{ c.client_id }}/edit">Modifier</a>
+                {% if c.client_status != 'archived' %}
+                <form method="post" action="/app/clients/{{ c.client_id }}/delete" class="d-inline"
+                      onsubmit="return confirm('Archiver « {{ c.client_name }} » ? Ses campagnes et leur historique sont conservés.')">
+                    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-danger btn-xs" type="submit">Archiver</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">
+            {% include 'partials/_empty.html.twig' with {
+                'icon': 'building',
+                'title': 'Aucun client',
+                'text': "Le client est le point de départ : une campagne lui appartient, et c'est lui qu'on retrouve sur chaque clic et chaque conversion. Créez-en un avant tout le reste.",
+                'cta_url': '/app/clients/add',
+                'cta_label': 'Créer le premier client'
+            } only %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

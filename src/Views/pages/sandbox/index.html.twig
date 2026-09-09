@@ -1,0 +1,252 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Bac à sable{% endblock %}
+{% block content %}
+
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-cone-striped fs-4"></i>
+    <div>
+        <strong>Bac à sable.</strong> Ces écrans n'existent pas en production — les routes n'y sont
+        pas enregistrées. Le money site et la plateforme externe sont simulés :
+        <strong>aucun appel ne sort d'ici</strong>. Tout ce qui est créé porte le préfixe
+        <code>{{ '[BAC A SABLE]' }}</code> et la suppression s'y fie entièrement.
+    </div>
+</div>
+
+<h1 class="h4 mb-3">Bac à sable</h1>
+
+{% if url_ecart %}
+<div class="alert alert-warning py-2 d-flex align-items-start gap-2">
+    <i class="bi bi-exclamation-triangle mt-1"></i>
+    <div class="small">
+        <strong>Les liens ci-dessous ne sont pas cliquables depuis ici.</strong>
+        Ils sont construits sur <code>{{ app_url }}</code> (valeur de <code>APP_URL</code>),
+        alors que vous naviguez sur <code>{{ url_ecart }}</code>.
+        En développement, posez <code>APP_URL={{ url_ecart }}</code> dans le <code>.env</code>.
+    </div>
+</div>
+{% endif %}
+
+{# ── Le parcours, raconte ───────────────────────────────────────────────── #}
+{% if liens %}
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-signpost-split"></i> Le parcours à tester</div>
+    <div class="card-body">
+        <ol class="parcours">
+            <li><strong>Plateforme Confluent Digital</strong> — elle émet son identifiant de clic
+                et envoie le visiteur vers Vigil</li>
+            <li><strong>Vigil</strong> — enregistre le clic, garde l'identifiant de la plateforme,
+                redirige avec le sien</li>
+            <li><strong>Money site</strong> — le formulaire s'affiche pré-rempli, le visiteur valide</li>
+            <li><strong>Vigil</strong> — reçoit le postback, enregistre la conversion, empile les relais</li>
+            <li><strong>Plateforme Confluent Digital</strong> — son pixel reçoit
+                <em>son</em> identifiant de départ. La boucle est fermée.</li>
+        </ol>
+
+        <div class="alert alert-secondary py-2 mb-0 mt-3 small">
+            <strong>Ce qu'il faut regarder :</strong> l'identifiant affiché à l'étape 1 doit
+            réapparaître, à l'identique, à l'étape 5. C'est tout le sujet de Vigil — le money site
+            ne configure qu'une seule URL de retour, et chaque plateforme récupère quand même
+            l'identifiant qu'elle attend.
+        </div>
+
+        <div class="mt-3">
+            <a class="btn btn-primary" href="/sandbox/plateforme?token={{ liens|first.cp_token }}">
+                <i class="bi bi-play-fill"></i> Lancer un parcours complet
+            </a>
+            <span class="text-muted small ms-2">
+                depuis {{ liens|first.campaign_name|replace({'[BAC A SABLE] ': ''}) }}
+                · {{ liens|first.publisher_name|replace({'[BAC A SABLE] ': ''}) }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Actions ────────────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-magic"></i> Jeu de test</div>
+            <div class="card-body">
+                {% if resume.campagnes > 0 %}
+                    <div class="row g-2 text-center small mb-3">
+                        {% set tuiles = [
+                            {'l': 'Clients',    'v': resume.clients},
+                            {'l': 'Publishers', 'v': resume.publishers},
+                            {'l': 'Campagnes',  'v': resume.campagnes},
+                            {'l': 'Liens',      'v': resume.acces},
+                            {'l': 'Pixels',     'v': resume.pixels},
+                            {'l': 'Clics',      'v': resume.clics},
+                            {'l': 'Conversions','v': resume.conversions},
+                            {'l': 'Relais',     'v': resume.relais}
+                        ] %}
+                        {% for t in tuiles %}
+                        <div class="col-3">
+                            <div class="fs-5 fw-semibold">{{ t.v }}</div>
+                            <div class="text-muted" style="font-size:.68rem">{{ t.l }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small">
+                        Crée 3 clients, 4 publishers, 5 campagnes, une matrice d'accès volontairement
+                        incomplète, une destination par campagne et le pixel de 3 publishers.
+                        Rien n'est greffé sur vos données réelles.
+                    </p>
+                {% endif %}
+
+                <div class="d-grid gap-2">
+                    <form method="post" action="/sandbox/seed"
+                          {% if resume.campagnes > 0 %}onsubmit="return confirm('Recréer le jeu ?\n\nLes données de test actuelles seront supprimées, et les jetons régénérés : tout lien déjà copié ailleurs cessera de fonctionner (404).')"{% endif %}>
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-primary w-100" type="submit">
+                            <i class="bi bi-magic"></i>
+                            {{ resume.campagnes > 0 ? 'Recréer le jeu de test' : 'Créer le jeu de test' }}
+                        </button>
+                    </form>
+
+                    {% if resume.campagnes > 0 %}
+                    <form method="post" action="/sandbox/traffic">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-secondary w-100" type="submit">
+                            <i class="bi bi-graph-up"></i> Générer du trafic (7 jours)
+                        </button>
+                    </form>
+                    <form method="post" action="/sandbox/flush">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-secondary w-100" type="submit">
+                            <i class="bi bi-send"></i> Vider la file de relais
+                        </button>
+                    </form>
+                    <form method="post" action="/sandbox/reset"
+                          onsubmit="return confirm('Supprimer tout le jeu de test ? Seules les données préfixées seront touchées.')">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-danger w-100" type="submit">
+                            <i class="bi bi-trash"></i> Tout supprimer
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {% if testeur %}
+                <div class="alert alert-info mt-3 mb-0 py-2">
+                    <div class="small fw-semibold mb-1"><i class="bi bi-person-badge"></i> Compte de test jetable</div>
+                    <div class="small">
+                        <code>{{ testeur.email }}</code><br>
+                        <code>{{ testeur.motdepasse }}</code>
+                    </div>
+                    <div class="text-muted mt-1" style="font-size:.72rem">
+                        Affiché une seule fois. Utilisez-le pour tester la connexion et la
+                        vérification en deux étapes — jamais un compte réel : un enrôlement
+                        écrasé ne se récupère pas. Il est supprimé avec le jeu.
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if resume.campagnes > 0 %}
+                <p class="text-muted mt-3 mb-0" style="font-size:.78rem">
+                    Le trafic est écrit directement en base pour remplir les écrans.
+                    Pour exercer le vrai chemin — nginx, redirection, postback — utilisez
+                    un lien du tableau ci-contre.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Journal ────────────────────────────────────────────────────────── #}
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header justify-content-between">
+                <span><i class="bi bi-list-ol"></i> Journal de la boucle</span>
+                {% if journal %}
+                <form method="post" action="/sandbox/journal">
+                    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-secondary btn-xs" type="submit">Vider</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if journal %}
+                    <ol class="sandbox-journal">
+                    {% for e in journal %}
+                        {% set couleurs = {
+                            'jeu': 'secondary', 'trafic': 'secondary', 'atterrissage': 'primary',
+                            'postback': 'warning', 'conversion': 'success', 'relai': 'info'
+                        } %}
+                        <li>
+                            <span class="badge text-bg-{{ couleurs[e.etape]|default('light') }}">{{ e.etape }}</span>
+                            <span class="ms-1">{{ e.detail }}</span>
+                            {% if e.donnees %}
+                                <pre class="sandbox-data">{{ e.donnees|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    </ol>
+                {% else %}
+                    <p class="text-muted mb-0">
+                        Rien encore. Créez le jeu, ouvrez un lien de tracking, validez la commande
+                        sur le faux money site : les étapes s'inscriront ici dans l'ordre.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Les liens ──────────────────────────────────────────────────────────── #}
+{% if liens %}
+<div class="card card-table">
+    <div class="card-header justify-content-between">
+        <span><i class="bi bi-link-45deg"></i> Liens de tracking</span>
+        <span class="text-muted small">{{ liens|length }} couples campagne × publisher</span>
+    </div>
+    <div class="card-body border-bottom bg-body-tertiary py-2">
+        <p class="text-muted small mb-0">
+            La matrice est volontairement <strong>incomplète</strong> : tous les publishers n'ont pas
+            accès à toutes les campagnes. Un couple absent n'a pas de ligne ici parce qu'il n'a pas
+            de jeton — l'autorisation n'est pas un contrôle, c'est l'absence d'adresse.
+        </p>
+    </div>
+    <div class="table-responsive table-scroll">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead><tr>
+                <th>Client</th><th>Campagne</th><th class="text-end">Payout</th>
+                <th>Publisher</th><th>Pixel</th><th>Lien</th><th></th>
+            </tr></thead>
+            <tbody>
+            {% for l in liens %}
+                <tr>
+                    <td class="text-muted small">{{ l.client_name|replace({'[BAC A SABLE] ': ''}) }}</td>
+                    <td>{{ l.campaign_name|replace({'[BAC A SABLE] ': ''}) }}</td>
+                    <td class="text-end" data-order="{{ l.campaign_payout }}">{{ l.campaign_payout|money }}</td>
+                    <td>{{ l.publisher_name|replace({'[BAC A SABLE] ': ''}) }}</td>
+                    <td>
+                        {% if l.a_pixel %}
+                            <span class="badge text-bg-success" title="Son pixel se déclenchera sur cette conversion">oui</span>
+                        {% else %}
+                            <span class="badge text-bg-light text-muted" title="Aucun pixel : la conversion sera enregistrée mais pas remontée à ce publisher">non</span>
+                        {% endif %}
+                    </td>
+                    <td style="min-width:22rem">
+                        {% set url = base_url ~ '/c/' ~ l.cp_token %}
+                        <div class="input-group input-group-sm">
+                            <input class="form-control font-monospace" readonly value="{{ url }}">
+                            <button class="btn btn-outline-secondary copy-btn" type="button"
+                                    data-copy="{{ url }}" title="Copier"><i class="bi bi-clipboard"></i></button>
+                        </div>
+                    </td>
+                    <td class="text-nowrap">
+                        <a class="btn btn-primary btn-xs" href="/sandbox/plateforme?token={{ l.cp_token }}"
+                           title="Démarre le parcours depuis la plateforme Confluent Digital">
+                            <i class="bi bi-play-fill"></i> Parcours
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

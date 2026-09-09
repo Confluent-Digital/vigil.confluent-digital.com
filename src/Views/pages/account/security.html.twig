@@ -1,0 +1,91 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Sécurité{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Sécurité du compte</h1>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header py-2 fw-semibold">Vérification en deux étapes</div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <span class="badge text-bg-success"><i class="bi bi-shield-check"></i> Active</span>
+                    application d'authentification
+                </p>
+                <p class="text-muted small">
+                    Codes de secours restants :
+                    <strong class="{{ remaining_codes <= 2 ? 'text-danger' }}">{{ remaining_codes }}</strong>
+                    sur {{ total_codes }}.
+                    {% if remaining_codes <= 2 %}Régénérez-les avant de tomber à zéro.{% endif %}
+                </p>
+                <form method="post" action="/app/security/regenerate"
+                      onsubmit="return confirm('Régénérer vos codes de secours ? Les anciens cesseront immédiatement de fonctionner.')">
+                    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                        <i class="bi bi-arrow-clockwise"></i> Régénérer les codes de secours</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header py-2 fw-semibold">Repli par courriel</div>
+            <div class="card-body">
+                {% if fallback_30d > 0 %}
+                    <div class="alert alert-warning py-2 mb-2">
+                        <strong>{{ fallback_30d }} connexion(s)</strong> ont utilisé le code reçu par
+                        courriel ces 30 derniers jours, sans l'application d'authentification.
+                        Si ce n'était pas vous, votre boîte mail est compromise.
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-2">
+                        Aucune connexion par courriel ces 30 derniers jours.
+                    </p>
+                {% endif %}
+                <p class="text-muted small mb-0">
+                    Le code par courriel permet de se connecter sans l'application. C'est pratique,
+                    mais cela signifie qu'un accès à votre boîte mail suffit à entrer :
+                    protégez-la au moins autant que ce compte.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-table mt-3">
+    <div class="card-header py-2 fw-semibold">Journal de connexion</div>
+    <div class="table-responsive table-scroll">
+        <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Date</th><th>Événement</th><th>IP</th><th>Navigateur</th></tr></thead>
+            <tbody>
+            {% set labels = {
+                'password_ok': ['Mot de passe accepté', 'secondary'],
+                'password_fail': ['Mot de passe refusé', 'danger'],
+                'totp_ok': ['Application vérifiée', 'success'],
+                'totp_fail': ['Code refusé', 'danger'],
+                'email_code_sent': ['Code envoyé par courriel', 'secondary'],
+                'email_code_ok': ['Connexion par courriel', 'warning'],
+                'email_code_fail': ['Code courriel refusé', 'danger'],
+                'recovery_ok': ['Code de secours utilisé', 'warning'],
+                'recovery_fail': ['Code de secours refusé', 'danger'],
+                'enrolled': ['Configuration de la vérification', 'success'],
+                'locked': ['Compte temporairement bloqué', 'danger']
+            } %}
+            {% for a in attempts %}
+                {% set l = labels[a.attempt_event]|default([a.attempt_event, 'light']) %}
+                <tr>
+                    <td class="text-nowrap">{{ a.attempt_date|paris('d/m/Y H:i:s') }}</td>
+                    <td><span class="badge text-bg-{{ l[1] }}">{{ l[0] }}</span></td>
+                    <td class="text-muted">{{ a.ip|default('—') }}</td>
+                    <td class="text-muted small text-truncate" style="max-width:22rem"
+                        title="{{ a.attempt_user_agent }}">{{ a.attempt_user_agent|default('—') }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-4">Aucune connexion enregistrée.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

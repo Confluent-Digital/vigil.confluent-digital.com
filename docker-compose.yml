@@ -1,0 +1,113 @@
+services:
+
+  vigil_database:
+    image: mariadb:10.11
+    container_name: vigil_database
+    restart: always
+    env_file: [.env]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      TZ: ${TZ}
+    command:
+      # SQLyog ne connait pas caching_sha2_password ni ed25519 : on impose
+      # mysql_native_password sur tout le serveur (cf. .claude/rules/database.md).
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_allowed_packet=268435456
+      - --max_connections=500
+      # Chemin d'ecriture des clics : on accepte de perdre <1s en cas de crash
+      # brutal de l'hote, en echange d'environ 5x le debit d'INSERT.
+      - --innodb-flush-log-at-trx-commit=2
+      - --innodb-buffer-pool-size=1G
+      - --innodb-log-file-size=256M
+      - --innodb-flush-method=O_DIRECT
+    volumes:
+      - ${DOCKER_DB_DIRECTORY}:/var/lib/mysql
+      - ./.docker/mariadb/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - 127.0.0.1:${DOCKER_MYSQL_PORT}:3306
+    networks: [vigil_network]
+    logging:
+      driver: "json-file"
+      options: {max-size: "30m", max-file: "1"}
+
+  vigil_redis:
+    image: redis:7-alpine
+    container_name: vigil_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - 127.0.0.1:${DOCKER_REDIS_PORT}:6379
+    networks: [vigil_network]
+    logging:
+      driver: "json-file"
+      options: {max-size: "10m", max-file: "1"}
+
+  vigil_mailhog:
+    image: mailhog/mailhog
+    container_name: vigil_mailhog
+    restart: always
+    ports:
+      - 127.0.0.1:${DOCKER_MAILHOG_SMTP_PORT:-1029}:1025
+      - 127.0.0.1:${DOCKER_MAILHOG_HTTP_PORT:-8029}:8025
+    networks:
+      vigil_network:
+        # PHPMailer refuse un nom d'hote contenant un tiret bas (ce n'est pas
+        # un caractere valide dans un hostname), et toute la convention de
+        # nommage des conteneurs du parc en utilise. L'alias evite d'avoir a
+        # renommer le conteneur ou a coder une adresse IP en dur.
+        aliases: [mailhog]
+    logging:
+      driver: "json-file"
+      options: {max-size: "10m", max-file: "1"}
+
+  vigil_php:
+    build:
+      context: ./.docker/php
+    image: vigil/php:8.3-fpm
+    container_name: vigil_php
+    restart: always
+    user: ${UID}:${GID}
+    env_file: [.env]
+    environment:
+      APP_ENV: ${APP_ENV}
+      TZ: ${TZ}
+    volumes:
+      - .:${DOCKER_WORKING_DIR}
+      - ./.docker/php/php.ini:/usr/local/etc/php/conf.d/zz-vigil.ini:ro
+      - ./.docker/php/pool.conf:/usr/local/etc/php-fpm.d/zzz-vigil-pool.conf:ro
+    working_dir: ${DOCKER_WORKING_DIR}
+    ports:
+      - 127.0.0.1:${DOCKER_PHP_PORT}:9000
+    depends_on: [vigil_database, vigil_redis, vigil_mailhog]
+    networks: [vigil_network]
+    logging:
+      driver: "json-file"
+      options: {max-size: "30m", max-file: "1"}
+
+  vigil_nginx:
+    image: docker-registry.confluent-digital.com/nginx:1.28-alpine
+    container_name: vigil_nginx
+    restart: always
+    env_file: [.env]
+    environment:
+      APP_ENV: ${APP_ENV}
+      TZ: ${TZ}
+    volumes:
+      - .:${DOCKER_WORKING_DIR}
+      - ./.docker/nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - 127.0.0.1:${DOCKER_NGINX_PORT}:80
+    depends_on: [vigil_php]
+    networks: [vigil_network]
+    logging:
+      driver: "json-file"
+      options: {max-size: "30m", max-file: "1"}
+
+networks:
+  vigil_network:
+    driver: bridge

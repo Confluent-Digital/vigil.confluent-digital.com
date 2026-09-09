@@ -1,0 +1,32 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Codes de secours{% endblock %}
+{% block content %}
+<div class="mx-auto" style="max-width:38rem">
+    <h1 class="h4 mb-3"><i class="bi bi-key"></i> Vos codes de secours</h1>
+
+    <div class="alert alert-warning">
+        <strong>Ces codes ne seront plus jamais affichés.</strong>
+        Ils sont stockés hachés : ni vous, ni un administrateur ne pourront les relire.
+        Notez-les maintenant, dans votre gestionnaire de mots de passe.
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="recovery-grid">
+                {% for c in codes %}<code class="recovery-code">{{ c }}</code>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted small">
+        Chaque code ne sert qu'une fois. Saisissez-en un à la place du code de votre
+        application si vous perdez votre téléphone.
+    </p>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm copy-btn" type="button"
+                data-copy="{{ codes|join('\n') }}"><i class="bi bi-clipboard"></i> Copier</button>
+        <a class="btn btn-primary btn-sm" href="/app">J'ai noté mes codes, continuer</a>
+    </div>
+</div>
+{% endblock %}

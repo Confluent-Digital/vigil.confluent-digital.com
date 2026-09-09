@@ -1,0 +1,24 @@
+/.idea/
+/vendor/
+/node_modules/
+/.env
+/cache/*
+!/cache/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/.docker-data/
+/composer.phar
+/.phpunit.cache/
+*.log
+/.claude/settings.local.json
+/.npm-cache/
+/node_modules/
+/public/assets/dist/
+/logs/sandbox-journal.json
+
+# Caches créés dans le projet parce que le conteneur tourne en non-root et n'a
+# pas de HOME inscriptible (cf. .npmrc). Ce sont des caches, pas des sources.
+/.composer/
+/.npm-cache/
+/.phpunit.cache/
+/.idea/

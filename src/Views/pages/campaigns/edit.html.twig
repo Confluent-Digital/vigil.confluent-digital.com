@@ -1,0 +1,135 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}{{ campaign.campaign_id is defined ? 'Modifier une campagne' : 'Nouvelle campagne' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-sub"><a href="/app/campaigns" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Campagnes</a></div>
+        <h1 class="page-title">{{ campaign.campaign_id is defined ? 'Modifier ' ~ campaign.campaign_name : 'Nouvelle campagne' }}</h1>
+    </div>
+</div>
+
+{% if errors %}
+<div class="alert alert-danger">
+    <strong><i class="bi bi-exclamation-triangle"></i> Le formulaire n'a pas été enregistré.</strong>
+    <ul class="mb-0 mt-1">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{# Sans client, le selecteur ci-dessous est vide et le formulaire ne peut pas
+   partir : on le dit avant que l'utilisateur ne bute dessus. #}
+{% if clients is empty %}
+<div class="alert alert-warning">
+    <strong><i class="bi bi-info-circle"></i> Aucun client n'existe encore.</strong>
+    Une campagne appartient obligatoirement à un client.
+    <a class="btn btn-outline-secondary btn-xs ms-2" href="/app/clients/add">Créer un client</a>
+</div>
+{% endif %}
+
+<div class="row">
+<div class="col-xxl-10">
+<form method="post" action="{{ campaign.campaign_id is defined ? '/app/campaigns/' ~ campaign.campaign_id ~ '/edit' : '/app/campaigns/add' }}">
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-megaphone"></i> Offre</div>
+    <div class="card-body">
+    <div class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label" for="campaign_name">Nom <span class="text-danger">*</span></label>
+            <input class="form-control" id="campaign_name" name="campaign_name" required
+                   placeholder="Nom de l'offre"
+                   value="{{ campaign.campaign_name|default('') }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="campaign_id_client">Client <span class="text-danger">*</span></label>
+            <select class="form-select" id="campaign_id_client" name="campaign_id_client" required>
+                {% for cl in clients %}
+                    <option value="{{ cl.client_id }}" {{ campaign.campaign_id_client|default(0) == cl.client_id ? 'selected' }}>{{ cl.client_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="campaign_status">Statut</label>
+            <select class="form-select" id="campaign_status" name="campaign_status">
+                {% for s in ['paused', 'active', 'archived'] %}
+                    <option value="{{ s }}" {{ campaign.campaign_status|default('paused') == s ? 'selected' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <div class="form-text">Hors <code>active</code>, les liens ne redirigent pas.</div>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label" for="campaign_dest_url">URL de destination <span class="text-danger">*</span></label>
+            <input class="form-control font-monospace" id="campaign_dest_url" name="campaign_dest_url" required
+                   placeholder="https://money-site.com/offre?clickid={clickid}&amp;src={publisher_token}&amp;s1={sub1}"
+                   value="{{ campaign.campaign_dest_url|default('') }}">
+            <div class="form-text">
+                <span class="d-block mb-1">Macros disponibles — cliquez pour insérer au curseur :</span>
+                {% for m in macros %}<code class="me-1 macro-chip" role="button" data-macro="{{ '{' ~ m ~ '}' }}">{{ '{' ~ m ~ '}' }}</code>{% endfor %}
+                <span class="d-block mt-1">Toute valeur est encodée automatiquement. La destination ne vient que d'ici — jamais de la requête.</span>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label" for="campaign_payout">Payout par défaut</label>
+            <input class="form-control text-end num" id="campaign_payout" name="campaign_payout"
+                   value="{{ campaign.campaign_payout|default('0') }}">
+            <div class="form-text">Surchargeable par publisher.</div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="campaign_currency">Devise</label>
+            <select class="form-select" id="campaign_currency" name="campaign_currency">
+                {% for c in ['EUR', 'USD', 'GBP'] %}
+                    <option value="{{ c }}" {{ campaign.campaign_currency|default('EUR') == c ? 'selected' }}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="campaign_date_stop">Date de fin</label>
+            <input class="form-control" type="date" id="campaign_date_stop" name="campaign_date_stop"
+                   value="{{ campaign.campaign_date_stop|default('') }}">
+            <div class="form-text">Vide = pas de fin.</div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-shield-lock"></i> Authentification du postback entrant</div>
+    <div class="card-body">
+        <div class="alert alert-warning py-2 mb-3">
+            Sans secret <em>ni</em> whitelist IP, quiconque connaît un clickid peut créditer des conversions —
+            qui partiront ensuite en S2S chez vos partenaires et se factureront. Les deux sont cumulables.
+        </div>
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label" for="campaign_postback_secret">Secret partagé</label>
+                <input class="form-control font-monospace" id="campaign_postback_secret" name="campaign_postback_secret"
+                       value="{{ campaign.campaign_postback_secret|default('') }}">
+                <div class="form-text">Transmis par le money site en <code>&amp;s=…</code>. Généré automatiquement à la création.</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="campaign_postback_ips">IPs autorisées</label>
+                <input class="form-control font-monospace" id="campaign_postback_ips" name="campaign_postback_ips"
+                       placeholder="203.0.113.10, 198.51.100.0/24"
+                       value="{{ campaign.campaign_postback_ips|default('') }}">
+                <div class="form-text">CSV d'IPs ou de CIDR. Vide = pas de filtre.</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="campaign_postback_response">Réponse attendue</label>
+                <input class="form-control font-monospace" id="campaign_postback_response" name="campaign_postback_response"
+                       value="{{ campaign.campaign_postback_response|default('OK') }}">
+                <div class="form-text">Corps exact renvoyé au money site.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+    <a class="btn btn-link" href="/app/campaigns">Annuler</a>
+</div>
+</form>
+</div>
+</div>
+{% endblock %}

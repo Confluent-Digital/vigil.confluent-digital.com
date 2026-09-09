@@ -1,0 +1,169 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}{{ publisher ? 'Modifier un publisher' : 'Nouveau publisher' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-sub"><a href="/app/publishers" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Publishers</a></div>
+        <h1 class="page-title">{{ publisher ? 'Modifier ' ~ publisher.publisher_name : 'Nouveau publisher' }}</h1>
+    </div>
+</div>
+
+{% if error %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
+
+<div class="row">
+<div class="col-xl-9 col-xxl-8">
+<div class="card">
+<div class="card-header"><i class="bi bi-people"></i> Identité</div>
+<div class="card-body">
+<form method="post" action="{{ publisher and publisher.publisher_id is defined ? '/app/publishers/' ~ publisher.publisher_id ~ '/edit' : '/app/publishers/add' }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label" for="publisher_name">Nom <span class="text-danger">*</span></label>
+            <input class="form-control" id="publisher_name" name="publisher_name" required
+                   placeholder="Nom de la source de trafic"
+                   value="{{ publisher.publisher_name|default('') }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="publisher_status">Statut</label>
+            <select class="form-select" id="publisher_status" name="publisher_status">
+                {% for s in ['active', 'paused', 'archived'] %}
+                    <option value="{{ s }}" {{ publisher.publisher_status|default('active') == s ? 'selected' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <div class="form-text">Hors <code>active</code>, ses liens cessent de rediriger.</div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="publisher_contact_email">E-mail de contact</label>
+            <input class="form-control" type="email" id="publisher_contact_email" name="publisher_contact_email"
+                   placeholder="contact@publisher.com"
+                   value="{{ publisher.publisher_contact_email|default('') }}">
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="publisher_notes">Notes</label>
+            <textarea class="form-control" id="publisher_notes" name="publisher_notes" rows="3"
+                      placeholder="Type de trafic, conditions, interlocuteur…">{{ publisher.publisher_notes|default('') }}</textarea>
+        </div>
+    </div>
+    <div class="mt-4 pt-3 border-top d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <a class="btn btn-link" href="/app/publishers">Annuler</a>
+    </div>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+{% if publisher and publisher.publisher_id is defined %}
+<div class="card mt-3 card-table">
+    <div class="card-header justify-content-between">
+        <span><i class="bi bi-bullseye"></i> Pixel de conversion</span>
+    </div>
+    <div class="card-body border-bottom bg-body-tertiary">
+        <p class="text-muted small mb-3">
+            Déclaré <strong>une seule fois</strong> : il se déclenche sur toutes les conversions
+            de ce publisher, quelle que soit la campagne. Inutile de le recopier campagne par
+            campagne — et le jour où il change son pixel, une seule modification suffit.
+        </p>
+        <form method="post" action="/app/publishers/{{ publisher.publisher_id }}/pixel" class="row g-2">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <input type="hidden" name="cpb_id" value="">
+            <div class="col-md-4">
+                <label class="form-label" for="cpb_name">Nom</label>
+                <input class="form-control" id="cpb_name" name="cpb_name" placeholder="Pixel de conversion">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="cpb_method">Méthode</label>
+                <select class="form-select" id="cpb_method" name="cpb_method">
+                    <option value="GET">GET</option><option value="POST">POST</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="cpb_on_status">Statuts déclencheurs</label>
+                <input class="form-control" id="cpb_on_status" name="cpb_on_status" value="approved">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="cpb_success_pattern">Motif de succès</label>
+                <input class="form-control font-monospace" id="cpb_success_pattern"
+                       name="cpb_success_pattern" placeholder="vide = code HTTP seul">
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="cpb_url">URL du pixel</label>
+                <div class="input-group">
+                    <input class="form-control font-monospace" id="cpb_url" name="cpb_url" required
+                           placeholder="https://publisher.com/pixel?cid={external_clickid}&amp;payout={payout}">
+                    <button class="btn btn-outline-secondary" type="button" id="previewPixel">Prévisualiser</button>
+                </div>
+                <div class="form-text">
+                    {% for m in macros %}<code class="me-1 macro-chip" role="button" data-macro="{{ '{' ~ m ~ '}' }}">{{ '{' ~ m ~ '}' }}</code>{% endfor %}
+                    <br><code>{external_clickid}</code> porte le clic que le publisher nous a transmis :
+                    c'est en général ce qu'il attend.
+                </div>
+                <div id="previewPixelOut" class="mt-2 small"></div>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit">Enregistrer le pixel</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Nom</th><th>Portée</th><th>URL</th><th>Sur statut</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+            {% for p in pixels %}
+                <tr>
+                    <td class="fw-semibold">{{ p.cpb_name }}</td>
+                    <td>
+                        {% if p.cpb_id_campaign %}
+                            <span class="badge text-bg-secondary" title="Exception sur une campagne précise">{{ p.campaign_name }}</span>
+                        {% else %}
+                            <span class="badge text-bg-success">toutes campagnes</span>
+                        {% endif %}
+                    </td>
+                    <td><code class="small text-break">{{ p.cpb_url }}</code></td>
+                    <td><code>{{ p.cpb_on_status }}</code></td>
+                    <td><span class="badge text-bg-{{ p.cpb_status == 'active' ? 'success' : 'warning' }}">{{ p.cpb_status }}</span></td>
+                    <td class="text-end text-nowrap">
+                        <form method="post" action="/app/publishers/{{ publisher.publisher_id }}/pixel/{{ p.cpb_id }}/toggle" class="d-inline">
+                            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                            <button class="btn btn-outline-secondary btn-xs" type="submit">{{ p.cpb_status == 'active' ? 'Suspendre' : 'Activer' }}</button>
+                        </form>
+                        {% if not p.cpb_id_campaign %}
+                        <form method="post" action="/app/publishers/{{ publisher.publisher_id }}/pixel/{{ p.cpb_id }}/delete" class="d-inline"
+                              onsubmit="return confirm('Supprimer ce pixel ? Les conversions de ce publisher cesseront de lui être remontées.')">
+                            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                            <button class="btn btn-outline-danger btn-xs" type="submit">Supprimer</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                    Aucun pixel. Sans lui, les conversions de ce publisher sont enregistrées
+                    mais ne lui sont jamais remontées.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('previewPixel')?.addEventListener('click', async () => {
+    const out = document.getElementById('previewPixelOut');
+    const body = new URLSearchParams({ csrf: '{{ csrf_token }}', url: document.getElementById('cpb_url').value });
+    const res = await fetch('/app/campaigns/postback-preview', { method: 'POST', body });
+    const data = await res.json();
+    out.innerHTML = '<div class="alert alert-secondary py-2 mb-0"><strong>URL résolue :</strong><br>'
+        + '<code class="text-break">' + data.url.replace(/</g, '&lt;') + '</code>'
+        + (data.unknown.length ? '<div class="text-danger mt-1">Macros inconnues : ' + data.unknown.join(', ') + '</div>' : '')
+        + '</div>';
+});
+</script>
+{% endblock %}
+

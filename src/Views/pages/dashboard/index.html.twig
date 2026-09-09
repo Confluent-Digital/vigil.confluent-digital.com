@@ -1,0 +1,133 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Tableau de bord{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Tableau de bord</h1>
+        <div class="page-sub">7 derniers jours · heures en Europe/Paris</div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-outline-secondary btn-sm" href="/app/conversions"><i class="bi bi-cash-coin"></i> Conversions</a>
+        <a class="btn btn-outline-secondary btn-sm" href="/app/queue"><i class="bi bi-arrow-repeat"></i> Journal des relais</a>
+    </div>
+</div>
+
+{% if unprotected %}
+<div class="alert alert-warning mb-3">
+    <strong><i class="bi bi-shield-exclamation"></i> {{ unprotected|length }} campagne(s) sans authentification de postback.</strong>
+    N'importe qui connaissant un clickid peut y créditer des conversions — qui partiront ensuite chez le partenaire.
+    <div class="mt-2">
+        {% for c in unprotected %}
+            <a class="badge text-bg-warning text-decoration-none" href="/app/campaigns/{{ c.campaign_id }}/edit">{{ c.campaign_name }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# Prise en main : tant qu'aucune campagne n'existe, aucun chiffre ne peut
+   exister non plus. On montre l'ordre des operations plutot qu'une grille de
+   zeros sans explication. #}
+{% if counts.campaigns|default(0) == 0 %}
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-compass"></i> Prise en main</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3" style="max-width:70ch">
+            Rien n'est encore tracké. Vigil enregistre un clic, redirige vers la destination,
+            reçoit le postback du money site puis relaie la conversion aux plateformes.
+            Il faut ces quatre étapes, dans cet ordre, avant qu'un chiffre n'apparaisse ici.
+        </p>
+        <div class="row g-3">
+            {% set steps = [
+                {'n': 1, 'title': 'Créer un client',      'text': "L'annonceur qui porte les offres.",                            'url': '/app/clients/add',    'label': 'Nouveau client'},
+                {'n': 2, 'title': 'Créer une campagne',   'text': "URL de destination, payout, et le secret de postback.",        'url': '/app/campaigns/add',  'label': 'Nouvelle campagne'},
+                {'n': 3, 'title': 'Créer un publisher',   'text': "La source de trafic à qui on donnera un lien.",                'url': '/app/publishers/add', 'label': 'Nouveau publisher'},
+                {'n': 4, 'title': 'Générer le lien',      'text': "Sur la campagne, donner accès au publisher : le lien naît là.", 'url': '/app/campaigns',      'label': 'Ouvrir les campagnes'}
+            ] %}
+            {% for s in steps %}
+            <div class="col-md-6 col-xl-3">
+                <div class="h-100 p-3 rounded border" style="border-color:var(--vg-line)!important;background:var(--vg-surface-alt)">
+                    <div class="stat-label mb-1">Étape {{ s.n }}</div>
+                    <div class="fw-semibold mb-1">{{ s.title }}</div>
+                    <p class="text-muted mb-2" style="font-size:var(--vg-fs-xs);line-height:1.45">{{ s.text }}</p>
+                    <a class="btn btn-outline-secondary btn-xs" href="{{ s.url }}">{{ s.label }}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    {% set tiles = [
+        {'label': 'Clics',        'value': totals.clicks|default(0)|number_format(0, ',', ' '),        'icon': 'cursor',    'hint': 'source : pré-agrégat horaire'},
+        {'label': 'Clics uniques','value': totals.clicks_unique|default(0)|number_format(0, ',', ' '), 'icon': 'person-check', 'hint': 'unicité IP + user-agent sur 24 h'},
+        {'label': 'Conversions',  'value': totals.conversions|default(0)|number_format(0, ',', ' '),   'icon': 'cash-coin', 'hint': 'toutes campagnes'},
+        {'label': 'Payout',       'value': totals.payout|default(0)|money,  'icon': 'currency-euro', 'hint': 'somme des payouts'}
+    ] %}
+    {% for t in tiles %}
+    <div class="col-6 col-lg-3">
+        <div class="stat">
+            <div class="stat-label"><i class="bi bi-{{ t.icon }}"></i> {{ t.label }}</div>
+            <div class="stat-value">{{ t.value is same as(0) ? '0' : t.value }}</div>
+            <div class="stat-hint">{{ t.hint }}</div>
+            <i class="bi bi-{{ t.icon }} stat-mark" aria-hidden="true"></i>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-activity"></i> État</div>
+            <ul class="kv">
+                <li>
+                    <span class="kv-key">Campagnes actives</span>
+                    <span class="kv-val">{{ counts.campaigns|default(0) }}</span></li>
+                <li>
+                    <span class="kv-key">Publishers actifs</span>
+                    <span class="kv-val">{{ counts.publishers|default(0) }}</span></li>
+                <li>
+                    <span class="kv-key">Relais en attente</span>
+                    <span class="kv-val">{{ counts.queue_pending|default(0) }}</span></li>
+                <li>
+                    <span class="kv-key">Relais en échec</span>
+                    <span class="kv-val {{ counts.queue_failed|default(0) > 0 ? 'is-bad' : '' }}">{{ counts.queue_failed|default(0) }}</span></li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card h-100 card-table">
+            <div class="card-header"><i class="bi bi-clock-history"></i> Dernières conversions</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr>
+                        <th>Date</th><th>Campagne</th><th>Publisher</th><th>Txid</th><th>Statut</th><th class="text-end">Payout</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for c in recent %}
+                        <tr>
+                            <td class="text-nowrap">{{ c.conversion_date|paris }}</td>
+                            <td>{{ c.campaign_name }}</td>
+                            <td>{{ c.publisher_name|default('—') }}</td>
+                            <td><code>{{ c.conversion_external_txid }}</code></td>
+                            <td>{% include 'pages/traffic/_status.html.twig' with {'status': c.conversion_status} %}</td>
+                            <td class="text-end" data-order="{{ c.conversion_payout }}">{{ c.conversion_payout|money(c.conversion_currency) }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6">
+                            {% include 'partials/_empty.html.twig' with {
+                                'icon': 'cash-coin',
+                                'title': 'Aucune conversion enregistrée',
+                                'text': "Une conversion arrive quand le money site appelle notre postback avec un clickid connu. Vérifiez qu'une campagne active a bien un lien publisher en circulation."
+                            } only %}
+                        </td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

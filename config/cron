@@ -1,0 +1,19 @@
+# Vigil — tâches planifiées. Toutes en UTC, comme le reste du système.
+#
+#   crontab -u www-data config/cron
+#
+# Le conteneur PHP exécute ; task_runner.php trace dans logs/tasks/<module>/.
+
+VIGIL=/data/www/vigil.confluent-digital.com
+
+# Relais S2S sortants. Chaque minute : c'est le délai maximal entre une
+# conversion enregistrée et sa remontée chez la plateforme externe.
+* * * * * docker exec vigil_php php $VIGIL/bin/task_runner.php Postback PostbackFlushTask send >> $VIGIL/logs/cron.log 2>&1
+
+# Agrégation des statistiques. Horaire, avec rattrapage des 3 dernières heures :
+# une conversion arrive souvent bien après le clic qu'elle solde.
+5 * * * * docker exec vigil_php php $VIGIL/bin/task_runner.php Stats StatsAggregateTask run >> $VIGIL/logs/cron.log 2>&1
+
+# Partitions de t_click, trois mois d'avance. Une partition manquante arrête
+# l'ingestion en silence, au premier clic du mois : ce cron n'est pas optionnel.
+30 3 * * * docker exec vigil_php php $VIGIL/bin/task_runner.php Maintenance PartitionMaintenanceTask ensure >> $VIGIL/logs/cron.log 2>&1

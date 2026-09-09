@@ -1,0 +1,89 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Conversions{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Conversions</h1>
+        <div class="page-sub">{{ conversions|length }} ligne(s) affichée(s) · heures en Europe/Paris</div>
+    </div>
+    <form class="filter-bar" method="get">
+        <label class="filter">
+            <span class="filter-label">Statut</span>
+            <select class="form-select form-select-sm" name="status" onchange="this.form.submit()"
+                    aria-label="Filtrer par statut">
+                <option value="">Tous les statuts</option>
+                {% for s in ['approved', 'pending', 'rejected', 'chargeback'] %}
+                    <option value="{{ s }}" {{ status == s ? 'selected' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="filter">
+            <span class="filter-label">Période</span>
+            <select class="form-select form-select-sm" name="days" onchange="this.form.submit()"
+                    aria-label="Filtrer par période">
+                {% for d in [1, 7, 30, 90] %}<option value="{{ d }}" {{ days == d ? 'selected' }}>{{ d }} j</option>{% endfor %}
+            </select>
+        </label>
+    </form>
+</div>
+
+<div class="card card-table">
+<div class="table-responsive table-scroll">
+<table class="table table-sm table-hover mb-0 align-middle">
+    <thead><tr>
+        <th>Date</th><th>Campagne</th><th>Publisher</th><th>Txid</th><th>Clickid</th>
+        <th>Statut</th><th class="text-end">Payout</th><th>Relais</th><th class="text-end">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for c in conversions %}
+        <tr>
+            <td class="text-nowrap">{{ c.conversion_date|paris('d/m H:i:s') }}
+                {% if c.conversion_date_update %}
+                    <br><span class="text-muted" style="font-size:var(--vg-fs-micro)" title="Dernière mise à jour">
+                        maj {{ c.conversion_date_update|paris('d/m H:i') }}</span>
+                {% endif %}
+            </td>
+            <td>{{ c.campaign_name }}</td>
+            <td>{{ c.publisher_name|default('—') }}</td>
+            <td><code class="small">{{ c.conversion_external_txid }}</code></td>
+            <td><code class="small">{{ c.click_ulid|default('—') }}</code></td>
+            <td>{% include 'pages/traffic/_status.html.twig' with {'status': c.conversion_status} %}</td>
+            <td class="text-end" data-order="{{ c.conversion_payout }}">{{ c.conversion_payout|money(c.conversion_currency) }}</td>
+            <td>
+                {% if c.nb_relais == 0 %}
+                    <span class="text-muted" title="Aucune destination configurée sur la campagne">aucun</span>
+                {% elseif c.nb_echecs > 0 %}
+                    <span class="badge text-bg-danger" title="Relais en échec sur le total tenté"><i class="bi bi-exclamation-triangle"></i> {{ c.nb_echecs }} échec / {{ c.nb_relais }}</span>
+                {% else %}
+                    <span class="badge text-bg-success" title="Relais transmis sans erreur"><i class="bi bi-check-lg"></i> {{ c.nb_relais }}</span>
+                {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+                {% if current_user.role != 'publisher' and c.nb_relais > 0 %}
+                <form method="post" action="/app/conversions/{{ c.conversion_id }}/replay" class="d-inline"
+                      onsubmit="return confirm('Remettre tous les relais de cette conversion en attente ? Ils seront renvoyés aux plateformes.')">
+                    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-secondary btn-xs" type="submit"><i class="bi bi-arrow-clockwise"></i> Rejouer</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="9">
+            {% include 'partials/_empty.html.twig' with {
+                'icon': 'cash-coin',
+                'title': 'Aucune conversion sur la période',
+                'text': "Une conversion naît d'un postback entrant du money site portant un clickid connu. Si le trafic tourne mais que rien n'arrive, contrôlez l'URL de postback et son secret sur la campagne.",
+                'cta_url': '/app/campaigns',
+                'cta_label': 'Contrôler les campagnes',
+                'cta_icon': 'shield-lock',
+                'alt_url': '/app/clicks',
+                'alt_label': 'Voir les clics'
+            } only %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

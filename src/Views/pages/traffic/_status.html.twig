@@ -1,0 +1,11 @@
+{# Statut d'une conversion. Le badge porte toujours un mot : le statut ne passe
+   jamais par la seule couleur. Le libelle brut reste accessible au survol,
+   c'est lui qui circule dans les logs et les postbacks. #}
+{% set map = {
+    'approved':   {'class': 'success',   'label': 'Validée',    'icon': 'check-circle'},
+    'pending':    {'class': 'secondary', 'label': 'En attente', 'icon': 'hourglass-split'},
+    'rejected':   {'class': 'danger',    'label': 'Rejetée',    'icon': 'x-circle'},
+    'chargeback': {'class': 'dark',      'label': 'Chargeback', 'icon': 'arrow-counterclockwise'}
+} %}
+{% set s = map[status]|default({'class': 'light', 'label': status, 'icon': 'question-circle'}) %}
+<span class="badge text-bg-{{ s.class }}" title="{{ status }}"><i class="bi bi-{{ s.icon }}"></i> {{ s.label }}</span>

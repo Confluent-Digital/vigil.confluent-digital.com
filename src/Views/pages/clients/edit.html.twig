@@ -1,0 +1,57 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}{{ client ? 'Modifier un client' : 'Nouveau client' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-sub"><a href="/app/clients" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Clients</a></div>
+        <h1 class="page-title">{{ client ? 'Modifier ' ~ client.client_name : 'Nouveau client' }}</h1>
+    </div>
+</div>
+
+{% if error %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
+
+<div class="row">
+<div class="col-xl-9 col-xxl-8">
+<div class="card">
+<div class="card-header"><i class="bi bi-building"></i> Identité</div>
+<div class="card-body">
+<form method="post" action="{{ client and client.client_id is defined ? '/app/clients/' ~ client.client_id ~ '/edit' : '/app/clients/add' }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label" for="client_name">Nom <span class="text-danger">*</span></label>
+            <input class="form-control" id="client_name" name="client_name" required
+                   placeholder="Nom de l'annonceur"
+                   value="{{ client.client_name|default('') }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="client_status">Statut</label>
+            <select class="form-select" id="client_status" name="client_status">
+                {% for s in ['active', 'paused', 'archived'] %}
+                    <option value="{{ s }}" {{ client.client_status|default('active') == s ? 'selected' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <div class="form-text">Un client archivé garde ses campagnes et leur historique.</div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="client_contact_email">E-mail de contact</label>
+            <input class="form-control" type="email" id="client_contact_email" name="client_contact_email"
+                   placeholder="contact@annonceur.com"
+                   value="{{ client.client_contact_email|default('') }}">
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="client_notes">Notes</label>
+            <textarea class="form-control" id="client_notes" name="client_notes" rows="3"
+                      placeholder="Conditions, interlocuteur, particularités de facturation…">{{ client.client_notes|default('') }}</textarea>
+        </div>
+    </div>
+    <div class="mt-4 pt-3 border-top d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <a class="btn btn-link" href="/app/clients">Annuler</a>
+    </div>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endblock %}

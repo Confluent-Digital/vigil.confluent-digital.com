@@ -1,0 +1,128 @@
+# Vigil — vhost hote, installe dans /data/nginx/ par ./init.sh
+# nginx.conf de l'hote fait `include /data/nginx/*;`
+#
+# Placeholders remplaces a l'installation : __DOMAIN__, __PORT__
+
+# `upstreamlog`, defini globalement dans nginx.conf, journalise $request —
+# donc la chaine de requete. Sur /c/ et /pb elle porte les valeurs de
+# pre-remplissage (nom, courriel, telephone, date de naissance) : on declare un
+# format local qui ne garde que le chemin.
+log_format vigil_hot '[$time_local] $remote_addr "$request_method $uri" $status $body_bytes_sent $request_time';
+
+map $sent_http_content_type $expires_vigil {
+    default                 off;
+    text/html               2d;
+    text/css                90d;
+    application/javascript  2d;
+    ~image/                 90d;
+    ~font/                  max;
+}
+
+upstream vigil_backend {
+    server 127.0.0.1:__PORT__;
+    # Le chemin chaud fait beaucoup de requetes courtes : sans keepalive on paie
+    # une poignee de main TCP par clic.
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    server_name __DOMAIN__ dev.__DOMAIN__;
+
+    resolver 8.8.8.8 8.8.4.4 valid=300s ipv6=off;
+    resolver_timeout 5s;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+    add_header X-Frame-Options sameorigin;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Xss-Protection "1; mode=block";
+
+    server_tokens off;
+    sendfile on;
+
+    client_header_timeout 3m;
+    client_body_timeout   3m;
+    send_timeout          3m;
+    client_max_body_size  16m;
+    large_client_header_buffers 4 8k;
+    keepalive_timeout  30s;
+    keepalive_requests 10000;
+    reset_timedout_connection on;
+
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_comp_level 6;
+    gzip_types text/css text/plain text/javascript application/javascript application/json
+               application/x-javascript text/xml application/xml application/xml+rss
+               application/xhtml+xml image/svg+xml image/x-icon;
+    gzip_buffers 16 8k;
+
+    open_file_cache max=10000 inactive=5m;
+    open_file_cache_valid 5m;
+    open_file_cache_min_uses 1;
+
+    # Filet au niveau serveur : une location ajoutee sans `access_log` herite
+    # d'ici, et ne peut pas reintroduire la chaine de requete dans les journaux.
+    access_log /var/log/nginx/__DOMAIN___access.log vigil_hot;
+
+    location ^~ /.well-known { root /var/www/html/; }
+
+    # ── Chemin chaud ──────────────────────────────────────────────────────
+    # Timeouts courts et aucune compression : une redirection fait 0 octet de
+    # corps, gzip ne ferait qu'ajouter du travail.
+    location ^~ /c/ {
+        access_log /var/log/nginx/__DOMAIN___click.log vigil_hot buffer=64k flush=5s;
+        error_log  /var/log/nginx/__DOMAIN___error.log warn;
+
+        gzip off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 2s;
+        proxy_send_timeout    5s;
+        proxy_read_timeout    5s;
+        # Une redirection ne se met jamais en cache cote proxy : ce serait le
+        # meme piege que le 301, mais un cran plus haut.
+        proxy_buffering off;
+        proxy_pass http://vigil_backend;
+    }
+
+    location = /pb {
+        access_log /var/log/nginx/__DOMAIN___postback.log vigil_hot buffer=64k flush=5s;
+        error_log  /var/log/nginx/__DOMAIN___error.log warn;
+
+        gzip off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 2s;
+        proxy_send_timeout    10s;
+        proxy_read_timeout    10s;
+        proxy_buffering off;
+        proxy_pass http://vigil_backend;
+    }
+
+    # ── Back-office ───────────────────────────────────────────────────────
+    location / {
+        expires $expires_vigil;
+
+        access_log /var/log/nginx/__DOMAIN___access.log upstreamlog;
+        error_log  /var/log/nginx/__DOMAIN___error.log notice;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_pass http://vigil_backend;
+    }
+}

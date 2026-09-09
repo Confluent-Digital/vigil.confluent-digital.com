@@ -1,0 +1,68 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Plateforme Confluent Digital{% endblock %}
+{% block content %}
+
+<div class="mx-auto" style="max-width:44rem">
+
+    <div class="alert alert-info d-flex align-items-start gap-2 mb-3">
+        <i class="bi bi-broadcast-pin fs-4"></i>
+        <div>
+            <strong>Étape 1 sur 5 — vous êtes sur la plateforme Confluent Digital.</strong>
+            C'est elle qui envoie le visiteur, et c'est elle qui devra recevoir la conversion
+            à la fin. Tout l'intérêt de Vigil tient à ce que ces deux bouts se rejoignent.
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-1-circle"></i> Ce que la plateforme fabrique</div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Votre plateforme génère son propre identifiant de clic et le suit de bout en bout.
+                <strong>Retenez-le</strong> : c'est exactement celui que son pixel devra recevoir
+                à l'étape 5.
+            </p>
+
+            <div class="text-center py-3 mb-3" style="background:var(--bs-secondary-bg);border-radius:.4rem">
+                <div class="text-muted" style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase">
+                    Son identifiant de clic
+                </div>
+                <div class="fs-4 fw-semibold font-monospace mt-1">{{ clic_plateforme }}</div>
+            </div>
+
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-muted fw-normal">Annonceur</dt>
+                <dd class="col-sm-9">{{ lien.client_name|replace({'[BAC A SABLE] ': ''}) }}</dd>
+                <dt class="col-sm-3 text-muted fw-normal">Campagne</dt>
+                <dd class="col-sm-9">{{ lien.campaign_name|replace({'[BAC A SABLE] ': ''}) }}</dd>
+                <dt class="col-sm-3 text-muted fw-normal">Publisher</dt>
+                <dd class="col-sm-9">{{ lien.publisher_name|replace({'[BAC A SABLE] ': ''}) }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-2-circle"></i> Ce qu'elle va appeler</div>
+        <div class="card-body">
+            <p class="text-muted small mb-2">
+                Elle redirige le visiteur vers le lien Vigil, en lui passant son identifiant
+                dans <code>cid</code> — plus les coordonnées du destinataire, pour que le
+                formulaire du money site s'affiche déjà rempli.
+            </p>
+            <code class="d-block small text-break p-2" style="background:var(--bs-secondary-bg);border-radius:.3rem">{{ destination }}</code>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2">
+        <a class="btn btn-primary btn-lg" href="{{ destination }}">
+            <i class="bi bi-send"></i> Envoyer le visiteur vers Vigil
+        </a>
+        <a class="btn btn-link" href="/sandbox">Retour au bac à sable</a>
+    </div>
+
+    <p class="text-muted small mt-3 mb-0">
+        Vigil va enregistrer le clic, garder <code>{{ clic_plateforme }}</code> de côté, puis
+        rediriger vers le money site avec <strong>son propre</strong> identifiant. Les deux
+        se retrouveront à la fin.
+    </p>
+</div>
+{% endblock %}

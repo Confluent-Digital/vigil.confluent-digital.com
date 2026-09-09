@@ -1,0 +1,911 @@
+<title>Vigil, de bout en bout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  --bg:            #fbfbfd;
+  --surface:       #ffffff;
+  --surface-sunk:  #f4f4f8;
+  --ink:           #14141c;
+  --ink-soft:      #3d3d4d;
+  --muted:         #5f5f72;
+  --line:          #e3e3ec;
+  --line-strong:   #c9c9d8;
+  --accent:        #4f46e5;
+  --accent-ink:    #3730a3;
+  --accent-wash:   #eef0fe;
+  --warn:          #b45309;
+  --warn-wash:     #fdf3e3;
+  --danger:        #be123c;
+  --danger-wash:   #fdeef2;
+  --ok:            #047857;
+  --ok-wash:       #e8f6f0;
+
+  --font-display: "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+  --font-body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --measure: 68ch;
+  --gap:     clamp(1rem, 3vw, 2rem);
+  --radius:  6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:           #0d0d13;
+    --surface:      #15151e;
+    --surface-sunk: #1b1b26;
+    --ink:          #e9e9f2;
+    --ink-soft:     #c5c5d4;
+    --muted:        #9494a8;
+    --line:         #292935;
+    --line-strong:  #3d3d4e;
+    --accent:       #8f88f8;
+    --accent-ink:   #b4aefb;
+    --accent-wash:  #1d1a3c;
+    --warn:         #f0a33c;
+    --warn-wash:    #2e2312;
+    --danger:       #fb7185;
+    --danger-wash:  #331420;
+    --ok:           #34d399;
+    --ok-wash:      #0e2a22;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:           #0d0d13;
+  --surface:      #15151e;
+  --surface-sunk: #1b1b26;
+  --ink:          #e9e9f2;
+  --ink-soft:     #c5c5d4;
+  --muted:        #9494a8;
+  --line:         #292935;
+  --line-strong:  #3d3d4e;
+  --accent:       #8f88f8;
+  --accent-ink:   #b4aefb;
+  --accent-wash:  #1d1a3c;
+  --warn:         #f0a33c;
+  --warn-wash:    #2e2312;
+  --danger:       #fb7185;
+  --danger-wash:  #331420;
+  --ok:           #34d399;
+  --ok-wash:      #0e2a22;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  margin: 0;
+  padding: 0 var(--gap) 6rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1000px; margin: 0 auto; }
+.prose { max-width: var(--measure); }
+
+/* ── En-tête ──────────────────────────────────────────────────────────── */
+
+header.masthead {
+  border-bottom: 2px solid var(--ink);
+  padding: 3.5rem 0 1.25rem;
+  margin-bottom: 2.5rem;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 .85rem;
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: -.02em;
+  margin: 0 0 .6rem;
+  text-wrap: balance;
+}
+.standfirst {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+  margin: 0;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: .76rem;
+  color: var(--muted);
+  margin-top: 1.5rem;
+}
+.meta b { color: var(--ink-soft); font-weight: 500; }
+
+/* ── Sommaire ─────────────────────────────────────────────────────────── */
+
+nav.toc {
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.35rem;
+  margin-bottom: 3rem;
+}
+nav.toc p {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 .7rem;
+}
+nav.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: .3rem 1.5rem;
+  counter-reset: toc;
+}
+nav.toc li { counter-increment: toc; }
+nav.toc a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  font-size: .93rem;
+}
+nav.toc li::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  color: var(--accent);
+  margin-right: .55rem;
+}
+nav.toc a:hover, nav.toc a:focus-visible { border-bottom-color: var(--accent); color: var(--ink); }
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+
+section { margin-bottom: 4rem; scroll-margin-top: 1.5rem; }
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.55rem, 3.4vw, 2.05rem);
+  line-height: 1.12;
+  letter-spacing: -.012em;
+  margin: 0 0 .35rem;
+  text-wrap: balance;
+}
+h2 .num {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  font-weight: 400;
+  letter-spacing: .12em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: .5rem;
+}
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -.005em;
+  margin: 2.2rem 0 .5rem;
+}
+p { margin: 0 0 1rem; }
+.prose > p:last-child { margin-bottom: 0; }
+
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono);
+  font-size: .86em;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: .08em .35em;
+}
+a { color: var(--accent); }
+
+/* ── Figures ──────────────────────────────────────────────────────────── */
+
+figure {
+  margin: 2rem 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.1rem;
+  overflow-x: auto;
+}
+figure svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  color: var(--ink-soft);
+}
+figcaption {
+  font-size: .85rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  padding-top: .85rem;
+  border-top: 1px solid var(--line);
+  max-width: 62ch;
+}
+figcaption b { color: var(--ink-soft); font-weight: 600; }
+
+/* ── Encadrés ─────────────────────────────────────────────────────────── */
+
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1rem 1.25rem;
+  margin: 1.75rem 0;
+  max-width: var(--measure);
+}
+.callout.warn   { border-left-color: var(--warn);   background: var(--warn-wash); }
+.callout.danger { border-left-color: var(--danger); background: var(--danger-wash); }
+.callout p:last-child { margin-bottom: 0; }
+.callout .label {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  display: block;
+  margin-bottom: .4rem;
+}
+.callout.warn   .label { color: var(--warn); }
+.callout.danger .label { color: var(--danger); }
+
+/* ── Tableaux ─────────────────────────────────────────────────────────── */
+
+.table-scroll { overflow-x: auto; margin: 1.5rem 0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: .9rem;
+}
+th, td {
+  text-align: left;
+  padding: .55rem .8rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+thead th {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td code { background: none; border: none; padding: 0; color: var(--accent-ink); }
+
+/* ── Liste de vérification ────────────────────────────────────────────── */
+
+.checks { list-style: none; margin: 1.5rem 0; padding: 0; display: grid; gap: .9rem; }
+.checks li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: .9rem 1.1rem;
+}
+.checks .q {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.02rem;
+  display: block;
+  margin-bottom: .3rem;
+}
+.checks .a { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+.checks .a b { color: var(--ink); }
+
+/* ── Statuts ──────────────────────────────────────────────────────────── */
+
+.pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: .12em .5em;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.pill.ok    { background: var(--ok-wash);     color: var(--ok); }
+.pill.todo  { background: var(--warn-wash);   color: var(--warn); }
+.pill.none  { background: var(--surface-sunk); color: var(--muted); }
+
+footer.end {
+  border-top: 2px solid var(--ink);
+  padding-top: 1.25rem;
+  margin-top: 4rem;
+  font-size: .85rem;
+  color: var(--muted);
+  max-width: var(--measure);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Documentation technique · Confluent Digital</p>
+  <h1>Vigil, de bout en bout</h1>
+  <p class="standfirst">
+    Comment un clic devient une conversion, et comment une conversion repart chez
+    plusieurs plateformes alors que le money site n'accepte qu'une seule URL de retour.
+  </p>
+  <div class="meta">
+    <span><b>Version</b> 8 septembre 2026</span>
+    <span><b>Pile</b> PHP 8.3 · Slim 4 · MariaDB 10.11 · Redis</span>
+    <span><b>Statut</b> tranche verticale fonctionnelle</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <p>Sommaire</p>
+  <ol>
+    <li><a href="#probleme">Le problème d'origine</a></li>
+    <li><a href="#parcours">Le parcours complet</a></li>
+    <li><a href="#token">Pourquoi ça démultiplexe</a></li>
+    <li><a href="#idempotence">L'idempotence</a></li>
+    <li><a href="#prefill">Le pré-remplissage</a></li>
+    <li><a href="#chemins">Deux chemins d'exécution</a></li>
+    <li><a href="#verifier">Ce qu'il faut vérifier</a></li>
+    <li><a href="#etat">Ce qui existe, ce qui manque</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="probleme">
+  <h2><span class="num">01</span>Le problème d'origine</h2>
+  <div class="prose">
+    <p>
+      Aujourd'hui, plusieurs campagnes d'une plateforme d'affiliation externe pointent
+      vers le même money site. Quand une vente se conclut, le money site doit prévenir
+      la plateforme — mais il n'offre qu'<strong>un seul champ de postback</strong>.
+    </p>
+    <p>
+      Une seule URL, plusieurs campagnes à créditer : il faudrait en configurer
+      plusieurs, et c'est impossible.
+    </p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 760 270" role="img" aria-label="Trois campagnes d'une plateforme externe pointent vers un money site qui ne dispose que d'un seul champ de postback : deux des trois retours sont impossibles.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="ar-x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#be123c"/>
+        </marker>
+      </defs>
+
+      <text x="10" y="22" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">PLATEFORME EXTERNE</text>
+
+      <rect x="10" y="38" width="180" height="46" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="100" y="66" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Campagne A</text>
+
+      <rect x="10" y="100" width="180" height="46" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="100" y="128" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Campagne B</text>
+
+      <rect x="10" y="162" width="180" height="46" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="100" y="190" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Campagne C</text>
+
+      <text x="470" y="22" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">MONEY SITE</text>
+      <rect x="470" y="38" width="280" height="170" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="610" y="80" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Réglages du suivi</text>
+
+      <text x="492" y="118" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".7">Postback :</text>
+      <rect x="492" y="128" width="236" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 2"/>
+      <text x="610" y="148" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" text-anchor="middle" opacity=".55">1 seul champ</text>
+
+      <text x="610" y="186" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#be123c" text-anchor="middle">Impossible d'en mettre trois</text>
+
+      <line x1="192" y1="61" x2="466" y2="138" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)"/>
+      <line x1="192" y1="123" x2="466" y2="143" stroke="#be123c" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#ar-x)"/>
+      <line x1="192" y1="185" x2="466" y2="150" stroke="#be123c" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#ar-x)"/>
+
+      <text x="330" y="238" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle" opacity=".75">un retour possible, deux perdus</text>
+    </svg>
+    <figcaption>
+      <b>Le goulot.</b> Le money site n'expose qu'un champ de postback. Une campagne
+      peut être créditée, les autres non — leurs conversions ne remontent jamais.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="parcours">
+  <h2><span class="num">02</span>Le parcours complet</h2>
+  <div class="prose">
+    <p>
+      Vigil s'intercale. Le money site ne connaît plus qu'<strong>une seule</strong>
+      adresse de retour — la nôtre — et c'est Vigil qui répartit ensuite vers autant
+      de destinations que nécessaire.
+    </p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 880 400" role="img" aria-label="Parcours en deux temps : à l'aller, le visiteur passe de la plateforme externe à Vigil puis au money site ; au retour, le money site appelle Vigil qui relaie vers la plateforme externe et d'autres destinations.">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="a2v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#4f46e5"/>
+        </marker>
+      </defs>
+
+      <!-- Aller -->
+      <text x="10" y="18" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">ALLER — LE VISITEUR</text>
+
+      <rect x="10" y="32" width="150" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="85" y="56" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Visiteur</text>
+      <text x="85" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".6">clic dans un e-mail</text>
+
+      <rect x="215" y="32" width="170" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="300" y="56" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Plateforme externe</text>
+      <text x="300" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".6">pose son clickid</text>
+
+      <rect x="440" y="32" width="170" height="52" rx="4" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.6"/>
+      <text x="525" y="56" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#4f46e5" text-anchor="middle">Vigil</text>
+      <text x="525" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">GET /c/&lt;token&gt;</text>
+
+      <rect x="665" y="32" width="150" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="740" y="56" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Money site</text>
+      <text x="740" y="72" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".6">formulaire, paiement</text>
+
+      <line x1="162" y1="58" x2="211" y2="58" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
+      <line x1="387" y1="58" x2="436" y2="58" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
+      <line x1="612" y1="58" x2="661" y2="58" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#a2v)"/>
+
+      <text x="525" y="106" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">enregistre le clic · 302</text>
+      <text x="637" y="122" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">?clickid=01M2… &amp;prenom=… &amp;email=…</text>
+
+      <line x1="10" y1="152" x2="870" y2="152" stroke="currentColor" stroke-width="1" opacity=".25"/>
+
+      <!-- Retour -->
+      <text x="10" y="180" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">RETOUR — LA CONVERSION</text>
+
+      <rect x="665" y="196" width="150" height="46" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="740" y="224" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" text-anchor="middle">Money site</text>
+
+      <rect x="440" y="196" width="170" height="46" rx="4" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.6"/>
+      <text x="525" y="218" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#4f46e5" text-anchor="middle">Vigil</text>
+      <text x="525" y="233" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">GET /pb</text>
+
+      <line x1="661" y1="219" x2="614" y2="219" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"/>
+      <text x="637" y="208" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">1 seule URL</text>
+
+      <!-- File -->
+      <rect x="440" y="266" width="170" height="40" rx="4" fill="none" stroke="#4f46e5" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="525" y="291" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">file d'envoi</text>
+      <line x1="525" y1="244" x2="525" y2="262" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#a2v)"/>
+      <text x="533" y="258" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".7">empile</text>
+
+      <!-- Destinations -->
+      <rect x="215" y="252" width="170" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="300" y="274" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Plateforme externe</text>
+
+      <rect x="215" y="294" width="170" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="300" y="316" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Autre tracker</text>
+
+      <rect x="215" y="336" width="170" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="300" y="358" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Pixel, webhook…</text>
+
+      <line x1="436" y1="282" x2="389" y2="269" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#a2v)"/>
+      <line x1="436" y1="288" x2="389" y2="311" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#a2v)"/>
+      <line x1="436" y1="294" x2="389" y2="353" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#a2v)"/>
+
+      <text x="120" y="274" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">cid={external_clickid}</text>
+      <text x="120" y="316" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">macros au choix</text>
+      <text x="120" y="358" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">macros au choix</text>
+    </svg>
+    <figcaption>
+      <b>Le renversement.</b> À l'aller, Vigil retient le <code>clickid</code> de la
+      plateforme externe et donne le sien au money site. Au retour, il traduit dans
+      l'autre sens et rend à chaque destination l'identifiant qu'elle attend.
+      Le money site n'a qu'une URL à configurer ; le nombre de destinations
+      n'est plus sa contrainte.
+    </figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="label">Le point clé</span>
+    <p>
+      Aucun appel sortant n'est fait pendant que le money site attend. Vigil enregistre,
+      empile, répond <code>200</code>, puis un worker envoie une minute plus tard avec
+      des réessais. Sinon une plateforme lente ferait expirer le money site, qui
+      abandonnerait la conversion.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="token">
+  <h2><span class="num">03</span>Pourquoi ça démultiplexe</h2>
+  <div class="prose">
+    <p>
+      Toute la mécanique tient à une décision : le lien de tracking ne porte pas
+      « la campagne » d'un côté et « le publisher » de l'autre. Il porte
+      <strong>un jeton unique par couple</strong>.
+    </p>
+    <p>
+      Quand un postback arrive, Vigil retrouve le clic, donc le couple, donc la
+      campagne — donc les destinations à servir. Et un publisher ne peut pas
+      fabriquer un lien vers une campagne à laquelle il n'a pas accès : il n'en
+      détient pas le jeton.
+    </p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 700 300" role="img" aria-label="Matrice campagnes par publishers : chaque case autorisée porte un jeton distinct, qui devient l'URL du lien de tracking.">
+      <text x="150" y="24" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">PUBLISHER 1</text>
+      <text x="300" y="24" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">PUBLISHER 2</text>
+      <text x="450" y="24" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">PUBLISHER 3</text>
+
+      <text x="10" y="66" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Campagne A</text>
+      <text x="10" y="126" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Campagne B</text>
+      <text x="10" y="186" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor">Campagne C</text>
+
+      <rect x="140" y="44" width="130" height="32" rx="3" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.2"/>
+      <text x="205" y="65" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">iys5kpuDxPnj</text>
+
+      <rect x="290" y="44" width="130" height="32" rx="3" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.2"/>
+      <text x="355" y="65" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">q7Ne2wKmTbaR</text>
+
+      <rect x="440" y="44" width="130" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+      <text x="505" y="65" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" text-anchor="middle" opacity=".4">pas d'accès</text>
+
+      <rect x="140" y="104" width="130" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+      <text x="205" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" text-anchor="middle" opacity=".4">pas d'accès</text>
+
+      <rect x="290" y="104" width="130" height="32" rx="3" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.2"/>
+      <text x="355" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">zR4cVhLp8mQd</text>
+
+      <rect x="440" y="104" width="130" height="32" rx="3" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.2"/>
+      <text x="505" y="125" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">bK9tYuWs3nFj</text>
+
+      <rect x="140" y="164" width="130" height="32" rx="3" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.2"/>
+      <text x="205" y="185" font-family="IBM Plex Mono, monospace" font-size="11" fill="#4f46e5" text-anchor="middle">hT6dGxAe5vNu</text>
+
+      <rect x="290" y="164" width="130" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+      <text x="355" y="185" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" text-anchor="middle" opacity=".4">pas d'accès</text>
+
+      <rect x="440" y="164" width="130" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>
+      <text x="505" y="185" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" text-anchor="middle" opacity=".4">pas d'accès</text>
+
+      <line x1="10" y1="226" x2="690" y2="226" stroke="currentColor" stroke-width="1" opacity=".25"/>
+
+      <text x="10" y="256" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">Chaque jeton devient une URL :</text>
+      <text x="10" y="280" font-family="IBM Plex Mono, monospace" font-size="12" fill="#4f46e5">https://vigil.confluent-digital.com/c/iys5kpuDxPnj</text>
+    </svg>
+    <figcaption>
+      <b>Un jeton par case autorisée.</b> Les cases vides n'ont pas de jeton, donc pas
+      de lien : l'autorisation n'est pas une vérification, c'est l'absence d'adresse.
+      Et le chemin chaud n'a qu'une seule clé à résoudre par clic.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="idempotence">
+  <h2><span class="num">04</span>L'idempotence</h2>
+  <div class="prose">
+    <p>
+      Un money site retente son postback : délai dépassé, tâche de rattrapage, double
+      clic d'un opérateur. Sans protection, chaque tentative créerait une conversion et
+      un relai — et le partenaire recevrait cinq fois la même vente. Ces doublons-là ne
+      se rattrapent pas.
+    </p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 760 250" role="img" aria-label="Cinq postbacks identiques produisent une seule conversion et un seul relai ; un changement de statut en produit un second.">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor"/>
+        </marker>
+        <marker id="a3v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#4f46e5"/>
+        </marker>
+      </defs>
+
+      <text x="10" y="20" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".65">POSTBACKS REÇUS</text>
+
+      <text x="10" y="46"  font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">txid=TX-1 approved</text>
+      <text x="10" y="68"  font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">txid=TX-1 approved</text>
+      <text x="10" y="90"  font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">txid=TX-1 approved</text>
+      <text x="10" y="112" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">txid=TX-1 approved</text>
+      <text x="10" y="134" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">txid=TX-1 approved</text>
+      <text x="10" y="176" font-family="IBM Plex Mono, monospace" font-size="11" fill="#b45309">txid=TX-1 chargeback</text>
+
+      <line x1="160" y1="42"  x2="252" y2="86" stroke="currentColor" stroke-width="1.2" marker-end="url(#a3)" opacity=".55"/>
+      <line x1="160" y1="64"  x2="252" y2="86" stroke="currentColor" stroke-width="1.2" marker-end="url(#a3)" opacity=".55"/>
+      <line x1="160" y1="86"  x2="252" y2="86" stroke="currentColor" stroke-width="1.2" marker-end="url(#a3)" opacity=".55"/>
+      <line x1="160" y1="108" x2="252" y2="88" stroke="currentColor" stroke-width="1.2" marker-end="url(#a3)" opacity=".55"/>
+      <line x1="160" y1="130" x2="252" y2="90" stroke="currentColor" stroke-width="1.2" marker-end="url(#a3)" opacity=".55"/>
+      <line x1="160" y1="172" x2="252" y2="120" stroke="#b45309" stroke-width="1.4" marker-end="url(#a3)"/>
+
+      <rect x="256" y="56" width="190" height="76" rx="4" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.4"/>
+      <text x="351" y="82" font-family="IBM Plex Sans, sans-serif" font-size="12" font-weight="600" fill="#4f46e5" text-anchor="middle">UNIQUE (campagne, txid)</text>
+      <text x="351" y="104" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">INSERT … ON DUPLICATE</text>
+      <text x="351" y="120" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">KEY UPDATE</text>
+
+      <line x1="448" y1="94" x2="512" y2="94" stroke="#4f46e5" stroke-width="1.4" marker-end="url(#a3v)"/>
+
+      <rect x="516" y="56" width="234" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="633" y="78" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">1 conversion</text>
+
+      <rect x="516" y="100" width="234" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="633" y="122" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">1 relai « approved »</text>
+
+      <rect x="516" y="150" width="234" height="34" rx="4" fill="none" stroke="#b45309" stroke-width="1.2"/>
+      <text x="633" y="172" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#b45309" text-anchor="middle">1 relai « chargeback »</text>
+
+      <text x="633" y="212" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle" opacity=".7">le statut change la ligne, il n'en crée pas</text>
+      <text x="633" y="230" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle" opacity=".7">une seconde</text>
+    </svg>
+    <figcaption>
+      <b>Deux idempotences, pas une.</b> Celle de la ligne vient de la contrainte
+      <code>UNIQUE</code>. Celle de l'<i>effet</i> vient d'une règle en plus : on ne
+      relaie que si la conversion est neuve ou si son statut a bougé. Sans elle, la
+      conversion resterait unique mais le partenaire en recevrait cinq.
+    </figcaption>
+  </figure>
+
+  <div class="callout danger">
+    <span class="label">Ne jamais retirer</span>
+    <p>
+      La contrainte <code>UNIQUE (campagne, txid)</code> ne doit jamais disparaître, même
+      temporairement, même le temps d'une migration. Les doublons créés pendant la
+      fenêtre partiraient chez les partenaires et se factureraient.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="prefill">
+  <h2><span class="num">05</span>Le pré-remplissage</h2>
+  <div class="prose">
+    <p>
+      Le kit mailing permet à l'affilié de transmettre les coordonnées du destinataire
+      pour que le formulaire du money site s'affiche déjà rempli — douze champs :
+      civilité, nom, prénom, e-mail, code postal, ville, pays, jour, mois, année,
+      naissance, téléphone.
+    </p>
+    <p>
+      Ce sont des données directement identifiantes. La plateforme externe ne les
+      stocke pas ; Vigil non plus. <strong>Elles traversent, et rien de plus.</strong>
+    </p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 800 290" role="img" aria-label="Les douze champs de pré-remplissage traversent Vigil vers le money site ; trois barrières empêchent leur écriture en base, dans les journaux nginx et dans l'en-tête Referer.">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#4f46e5"/>
+        </marker>
+        <marker id="a4x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="#be123c"/>
+        </marker>
+      </defs>
+
+      <rect x="10" y="40" width="180" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="100" y="62" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Lien de l'affilié</text>
+      <text x="100" y="80" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".65">&amp;nom=…&amp;email=…&amp;tel=…</text>
+
+      <rect x="290" y="40" width="170" height="52" rx="4" fill="var(--accent-wash)" stroke="#4f46e5" stroke-width="1.6"/>
+      <text x="375" y="62" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#4f46e5" text-anchor="middle">Vigil</text>
+      <text x="375" y="80" font-family="IBM Plex Mono, monospace" font-size="10" fill="#4f46e5" text-anchor="middle">substitue les macros</text>
+
+      <rect x="590" y="40" width="200" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="690" y="62" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Formulaire du money site</text>
+      <text x="690" y="80" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".65">déjà rempli</text>
+
+      <line x1="192" y1="66" x2="286" y2="66" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#a4)"/>
+      <line x1="462" y1="66" x2="586" y2="66" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#a4)"/>
+
+      <line x1="10" y1="128" x2="790" y2="128" stroke="currentColor" stroke-width="1" opacity=".25"/>
+      <text x="10" y="152" font-family="IBM Plex Mono, monospace" font-size="11" fill="#be123c">CE QUI EST BLOQUÉ</text>
+
+      <rect x="10" y="168" width="250" height="70" rx="4" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="135" y="192" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Base de données</text>
+      <text x="135" y="212" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">Prefill::stripFrom()</text>
+      <text x="135" y="228" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">retire avant l'INSERT</text>
+
+      <rect x="275" y="168" width="250" height="70" rx="4" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="400" y="192" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">Journaux nginx</text>
+      <text x="400" y="212" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">format sur $uri,</text>
+      <text x="400" y="228" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">pas $request</text>
+
+      <rect x="540" y="168" width="250" height="70" rx="4" fill="none" stroke="#be123c" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="665" y="192" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" text-anchor="middle">En-tête Referer</text>
+      <text x="665" y="212" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">Referrer-Policy:</text>
+      <text x="665" y="228" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" text-anchor="middle" opacity=".7">no-referrer</text>
+
+      <line x1="135" y1="96" x2="135" y2="164" stroke="#be123c" stroke-width="1.2" marker-end="url(#a4x)"/>
+      <line x1="400" y1="96" x2="400" y2="164" stroke="#be123c" stroke-width="1.2" marker-end="url(#a4x)"/>
+      <line x1="665" y1="96" x2="665" y2="164" stroke="#be123c" stroke-width="1.2" marker-end="url(#a4x)"/>
+
+      <text x="400" y="268" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle" opacity=".75">seule trace conservée : un booléen « le lien portait un pré-remplissage »</text>
+    </svg>
+    <figcaption>
+      <b>Trois fuites, trois barrières.</b> La base capterait ces champs dans son JSON
+      fourre-tout ; nginx les écrirait dans la chaîne de requête du journal ; le
+      <code>Referer</code> les livrerait au money site. Chacune est fermée
+      explicitement — et le format de journal est posé au niveau du serveur, pour
+      qu'une route ajoutée plus tard ne rouvre pas la brèche.
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="chemins">
+  <h2><span class="num">06</span>Deux chemins d'exécution</h2>
+  <div class="prose">
+    <p>
+      Le clic et le postback ne passent pas par le framework. Sur ces deux routes, le
+      travail utile — lire cinq paramètres, écrire une ligne, renvoyer une redirection —
+      coûte moins d'une milliseconde, quand le démarrage de Slim en coûte une dizaine.
+    </p>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Chemin</th><th>Routes</th><th>Pile</th><th>Ce qui compte</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Chaud</b></td>
+          <td><code>/c/&lt;token&gt;</code><br><code>/pb</code></td>
+          <td>PDO seul, aucun framework, aucune session, aucun Twig</td>
+          <td>Latence et débit. Le trafic et l'argent passent par là.</td>
+        </tr>
+        <tr>
+          <td><b>Froid</b></td>
+          <td>tout le reste</td>
+          <td>Slim 4, Twig, Bootstrap</td>
+          <td>Confort de développement. Quelques utilisateurs.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <span class="label">Contre-intuitif</span>
+    <p>
+      Le choix du framework n'est pas ce qui détermine la tenue en charge — la
+      séparation des chemins l'est. Passer à Phalcon aurait fait gagner environ
+      8 ms sur une route qui, ici, n'utilise pas le framework du tout.
+    </p>
+  </div>
+
+  <div class="prose">
+    <p>
+      Trois autres décisions vont dans le même sens : la campagne est résolue depuis un
+      cache mémoire et non par une requête ; l'unicité d'un clic passe par Redis ; la
+      redirection est envoyée <em>avant</em> l'écriture, pour qu'une base saturée coûte
+      des clics non tracés plutôt que des visiteurs bloqués.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="verifier">
+  <h2><span class="num">07</span>Ce qu'il faut vérifier</h2>
+  <div class="prose">
+    <p>
+      Cette section existe parce que vous avez dit ne pas être sûr qu'on arrive à ce que
+      vous voulez faire. Voici les hypothèses sur lesquelles repose tout ce qui précède.
+      Si l'une est fausse, dites-le : c'est là que la conception se corrige, pas plus tard.
+    </p>
+  </div>
+
+  <ul class="checks">
+    <li>
+      <span class="q">Le visiteur passe-t-il bien par la plateforme externe <em>avant</em> Vigil ?</span>
+      <p class="a">
+        J'ai supposé l'ordre <b>plateforme externe → Vigil → money site</b>, conformément à
+        votre description. Si Vigil venait en premier, ou si les deux ordres coexistaient
+        selon les campagnes, la reprise du <code>clickid</code> externe changerait.
+      </p>
+    </li>
+    <li>
+      <span class="q">La plateforme externe transmet-elle son clickid dans l'URL ?</span>
+      <p class="a">
+        Vigil le cherche sous <code>cid</code>, <code>clickid</code>, <code>click_id</code>,
+        <code>subid</code>, <code>sub_id</code>, <code>ext_id</code> ou
+        <code>transaction_id</code>. <b>Si votre plateforme utilise un autre nom</b>,
+        il faut l'ajouter — sans lui, aucun relai ne peut être attribué.
+      </p>
+    </li>
+    <li>
+      <span class="q">Quel est le format de postback de la plateforme externe ?</span>
+      <p class="a">
+        C'est la question qui reste ouverte depuis le début. Il me faut : le nom du
+        paramètre qui porte <b>son</b> click id, le format du montant (centimes ou unités,
+        séparateur), et ce qu'elle considère comme un succès — certaines répondent
+        <code>200</code> avec un corps d'erreur.
+      </p>
+    </li>
+    <li>
+      <span class="q">Le money site renvoie-t-il un identifiant de transaction ?</span>
+      <p class="a">
+        Sans <code>txid</code>, Vigil retombe sur « une conversion par clic ». C'est
+        dégradé : <b>cela interdit deux ventes sur un même clic</b>. Il faut le réclamer
+        au client.
+      </p>
+    </li>
+    <li>
+      <span class="q">Le money site accepte-t-il un secret dans son postback ?</span>
+      <p class="a">
+        Sans secret ni liste d'IP autorisées, quiconque connaît un clickid peut créditer
+        des conversions — qui partiront ensuite chez vos partenaires et se factureront.
+        Le back-office signale ces campagnes en alerte.
+      </p>
+    </li>
+    <li>
+      <span class="q">Faut-il répercuter les annulations ?</span>
+      <p class="a">
+        Vigil sait recevoir un <code>chargeback</code> et le relayer. <b>Encore faut-il que
+        la plateforme externe sache le recevoir</b> — sinon le relai partira dans le vide.
+      </p>
+    </li>
+  </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="etat">
+  <h2><span class="num">08</span>Ce qui existe, ce qui manque</h2>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Brique</th><th>État</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Clic, redirection, pré-remplissage</td><td><span class="pill ok">fait</span></td><td>302, jamais 301 — un 301 serait mis en cache et les clics suivants ne seraient plus comptés</td></tr>
+        <tr><td>Postback entrant, idempotence</td><td><span class="pill ok">fait</span></td><td>vérifié : 5 postbacks identiques → 1 conversion, 1 relai</td></tr>
+        <tr><td>Routeur de relais + file avec réessais</td><td><span class="pill ok">fait</span></td><td>1 / 5 / 15 / 60 min puis abandon à la 5ᵉ tentative</td></tr>
+        <tr><td>Back-office, clients, publishers, campagnes</td><td><span class="pill ok">fait</span></td><td>générateur de liens, destinations, rejeu manuel</td></tr>
+        <tr><td>Statistiques horaires</td><td><span class="pill ok">fait</span></td><td>le back-office ne lit jamais la table des clics</td></tr>
+        <tr><td>Connexion en deux étapes</td><td><span class="pill ok">fait</span></td><td>TOTP, codes de secours, repli par courriel</td></tr>
+        <tr><td>Relai vers la plateforme externe</td><td><span class="pill todo">à configurer</span></td><td>le moteur est générique ; il manque son format de postback</td></tr>
+        <tr><td>Réconciliation Vigil / plateforme</td><td><span class="pill none">à écrire</span></td><td>demande l'API de la plateforme externe</td></tr>
+        <tr><td>Tampon Redis des clics</td><td><span class="pill none">à écrire</span></td><td>utile seulement au-delà de ~2 000 clics/s</td></tr>
+        <tr><td>Purge RGPD des clics anciens</td><td><span class="pill none">à écrire</span></td><td>les partitions mensuelles la rendent triviale</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="end">
+  Documentation générée avec le code, à tenir à jour avec lui.
+  Les règles détaillées vivent dans <code>.claude/rules/</code> ;
+  le schéma de base dans <code>database/migrations/</code>.
+</footer>
+
+</div>

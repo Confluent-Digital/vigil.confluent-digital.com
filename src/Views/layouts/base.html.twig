@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light dark">
+    <title>{% block title %}{{ app_name }}{% endblock %} · {{ app_name }}</title>
+    {# Le theme est applique avant le premier rendu : sinon l'ecran clignote en
+       blanc a chaque navigation pour un utilisateur en mode sombre. Le meme
+       code, defensif, est rejoue par vigil.js. #}
+    <script>
+        try {
+            var t = localStorage.getItem('vigil.theme');
+            if (!t) { t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+            document.documentElement.setAttribute('data-bs-theme', t);
+        } catch (e) { /* sans effet : le theme clair reste */ }
+    </script>
+    <link rel="stylesheet" href="/assets/dist/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/dist/bootstrap-icons.css">
+    <link rel="stylesheet" href="/assets/dist/vigil.css">
+</head>
+<body class="{% if current_user %}app{% else %}auth{% endif %}">
+{% if current_user %}
+<nav class="navbar navbar-expand-lg navbar-main border-bottom mb-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-semibold" href="/app">
+            <span class="brand-mark"><i class="bi bi-broadcast"></i></span> {{ app_name }}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+                aria-label="Afficher la navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+            <ul class="navbar-nav me-auto">
+                {% set links = {
+                    'dashboard':  {'url': '/app',             'label': 'Tableau de bord', 'icon': 'speedometer2'},
+                    'campaigns':  {'url': '/app/campaigns',   'label': 'Campagnes',       'icon': 'megaphone'},
+                    'clients':    {'url': '/app/clients',     'label': 'Clients',         'icon': 'building'},
+                    'publishers': {'url': '/app/publishers',  'label': 'Publishers',      'icon': 'people'},
+                    'clicks':     {'url': '/app/clicks',      'label': 'Clics',           'icon': 'cursor'},
+                    'conversions':{'url': '/app/conversions', 'label': 'Conversions',     'icon': 'cash-coin'},
+                    'queue':      {'url': '/app/queue',       'label': 'Relais',          'icon': 'arrow-repeat'},
+                    'dead':       {'url': '/app/dead-links',  'label': 'Anomalies',       'icon': 'exclamation-diamond'}
+                } %}
+                {% if sandbox_enabled and current_user.role != 'publisher' %}
+                    {% set links = links|merge({
+                        'sandbox': {'url': '/sandbox', 'label': 'Bac à sable', 'icon': 'cone-striped'}
+                    }) %}
+                {% endif %}
+                {% for key, link in links %}
+                    {% if not (current_user.role == 'publisher' and key in ['clients', 'publishers', 'queue', 'dead']) %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ active_page == key ? 'active fw-semibold' : '' }}" href="{{ link.url }}"
+                               {{ active_page == key ? 'aria-current="page"' : '' }}>
+                                <i class="bi bi-{{ link.icon }}"></i> {{ link.label }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item"><button class="nav-link border-0 bg-transparent" id="themeToggle" type="button"
+                    title="Jour / nuit" aria-label="Basculer entre le mode clair et le mode sombre"><i class="bi bi-moon-stars" id="themeIcon"></i></button></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"
+                       title="Compte" aria-label="Menu du compte">
+                        <i class="bi bi-person-circle"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text small">
+                            <strong>{{ current_user.name }}</strong><br>
+                            <span class="text-muted">{{ current_user.role }}</span>
+                        </span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/app/security"><i class="bi bi-shield-lock"></i> Sécurité</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Déconnexion</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+<main class="container-fluid px-3 pb-4">
+    {% if flash_ok %}
+        <div class="alert alert-success py-2"><i class="bi bi-check-circle"></i> {{ flash_ok }}</div>
+    {% endif %}
+    {% if flash_error %}
+        <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ flash_error }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+{# Toutes les dates sont stockees en UTC ; l'affichage est en Europe/Paris,
+   et le fuseau est rappele a l'ecran — c'est la premiere chose que regarde un
+   client qui conteste un chiffre. #}
+{% if current_user %}
+<footer class="container-fluid px-3 pb-4">
+    <div class="app-foot">
+        <i class="bi bi-clock"></i>
+        Heures affichées en <strong>Europe/Paris</strong> · données stockées en UTC
+    </div>
+</footer>
+{% endif %}
+
+<script src="/assets/dist/bootstrap.bundle.min.js"></script>
+<script src="/assets/dist/vigil.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

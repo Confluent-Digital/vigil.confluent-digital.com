@@ -1,0 +1,150 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Anomalies{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Anomalies</h1>
+    <form class="d-flex gap-2" method="get">
+        <select class="form-select form-select-sm" name="reason" onchange="this.form.submit()">
+            <option value="">Toutes les causes</option>
+            {% for cle, libelle in raisons %}
+                <option value="{{ cle }}" {{ reason == cle ? 'selected' }}>{{ libelle }}</option>
+            {% endfor %}
+        </select>
+        <select class="form-select form-select-sm" name="days" onchange="this.form.submit()">
+            {% for d in [1, 7, 30, 90] %}<option value="{{ d }}" {{ days == d ? 'selected' }}>{{ d }} j</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+<p class="text-muted small">
+    Ce ne sont pas des pages manquantes : ce sont des liens <strong>en circulation</strong>
+    qui envoient du trafic dans le vide. Des courriels sont déjà partis, des visiteurs cliquent.
+    Un lien dont la campagne est en pause se répare en un clic — encore faut-il savoir qu'il existe.
+</p>
+
+{% if totaux %}
+<div class="row g-2 mb-3">
+    {% for t in totaux %}
+    <div class="col-6 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body py-2">
+                <div class="text-muted" style="font-size:.72rem">{{ raisons[t.miss_reason]|default(t.miss_reason) }}</div>
+                <div class="fs-4 fw-semibold">{{ t.clics|number_format(0, ',', ' ') }}</div>
+                <div class="text-muted" style="font-size:.72rem">
+                    clic(s) perdu(s) · {{ t.liens }} lien(s)
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="h5 mt-4 mb-2">Liens morts</h2>
+<div class="card card-table">
+<div class="table-responsive table-scroll">
+<table class="table table-sm table-hover mb-0 align-middle">
+    <thead><tr>
+        <th class="text-end">Clics perdus</th><th>Jeton</th><th>Cause</th>
+        <th>Campagne</th><th>Publisher</th><th>Dernier</th><th>Provenance</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for l in liens %}
+        {% set reparable = l.miss_id_campaign is not null %}
+        <tr>
+            <td class="text-end fw-semibold" data-order="{{ l.miss_count }}">
+                {{ l.miss_count|number_format(0, ',', ' ') }}
+            </td>
+            <td><code class="small">{{ l.miss_token }}</code></td>
+            <td>
+                {% set couleurs = {
+                    'token_inconnu': 'secondary', 'token_malforme': 'light',
+                    'acces_suspendu': 'warning', 'campagne_suspendue': 'warning',
+                    'campagne_expiree': 'info', 'publisher_inactif': 'warning'
+                } %}
+                <span class="badge text-bg-{{ couleurs[l.miss_reason]|default('light') }}">
+                    {{ raisons[l.miss_reason]|default(l.miss_reason) }}
+                </span>
+            </td>
+            <td>
+                {% if l.campaign_name %}
+                    {{ l.campaign_name }}
+                    {% if l.campaign_status != 'active' %}
+                        <span class="badge text-bg-warning">{{ l.campaign_status }}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td>{{ l.publisher_name|default('—') }}</td>
+            <td class="text-nowrap small">{{ l.miss_last_at|paris('d/m H:i') }}</td>
+            <td class="small text-truncate text-muted" style="max-width:16rem"
+                title="{{ l.miss_last_referer }}">{{ l.miss_last_referer|default('—') }}</td>
+            <td class="text-end">
+                {% if reparable %}
+                    <a class="btn btn-outline-secondary btn-xs" href="/app/campaigns/{{ l.miss_id_campaign }}">
+                        Ouvrir la campagne</a>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">
+            Aucun lien mort sur la période — tous les liens en circulation redirigent.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+
+
+{# ── Postbacks refusés ───────────────────────────────────────────────────── #}
+<h2 class="h5 mt-4 mb-2">Postbacks refusés</h2>
+<p class="text-muted small">
+    <code>/pb</code> répond <strong>toujours 200</strong>, même quand il refuse — sinon le money site
+    déclencherait des files de retry, et lui dire « secret invalide » l'aiderait à le deviner.
+    Le revers : celui qui branche une campagne voit « HTTP 200 » et croit que ça marche.
+    C'est ici, et seulement ici, que le refus se voit.
+</p>
+
+<div class="card card-table">
+<div class="table-responsive table-scroll">
+<table class="table table-sm table-hover mb-0 align-middle">
+    <thead><tr>
+        <th class="text-end">Refus</th><th>Cause</th><th>Campagne</th>
+        <th>Dernière requête reçue</th><th>Dernier</th>
+    </tr></thead>
+    <tbody>
+    {% for r in refus %}
+        <tr>
+            <td class="text-end fw-semibold" data-order="{{ r.pmiss_count }}">
+                {{ r.pmiss_count|number_format(0, ',', ' ') }}</td>
+            <td>
+                {% set info = raisons_refus[r.pmiss_reason]|default([r.pmiss_reason, '']) %}
+                <span class="badge text-bg-{{ r.pmiss_reason == 'erreur_interne' ? 'danger' : 'warning' }}">
+                    {{ info[0] }}</span>
+                {% if info[1] %}<div class="text-muted small mt-1">{{ info[1] }}</div>{% endif %}
+            </td>
+            <td>{{ r.campaign_name|default('—') }}</td>
+            <td style="max-width:26rem"><code class="small text-break">{{ r.pmiss_last_query|default('(vide)') }}</code></td>
+            <td class="text-nowrap small">{{ r.pmiss_last_at|paris('d/m H:i') }}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">
+            Aucun postback refusé sur la période — tous ceux reçus ont été enregistrés.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+
+<p class="text-muted small mt-2">
+    Le secret est masqué dans la requête affichée. Agrégé par jour, cause et campagne.
+</p>
+
+<p class="text-muted small mt-3">
+    Les compteurs sont <strong>agrégés par jeton et par jour</strong> : un lien mort visité
+    dix mille fois produit une ligne, pas dix mille. Les jetons malformés — scanners, fautes
+    de frappe — sont regroupés sous <code>(malforme)</code>.
+</p>
+{% endblock %}

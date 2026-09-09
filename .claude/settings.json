@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(docker exec vigil_php *)",
+      "Bash(docker exec vigil_nginx *)",
+      "Bash(docker exec vigil_database mariadb -u*)",
+      "Bash(docker exec vigil_redis redis-cli *)",
+      "Bash(docker logs vigil_*)",
+      "Bash(docker compose ps)",
+      "Bash(docker compose up -d*)",
+      "Bash(docker compose restart*)",
+      "Bash(rm -rf /data/www/vigil.confluent-digital.com/cache/twig/*)",
+      "Bash(rm -rf cache/twig/*)",
+      "Bash(composer install*)",
+      "Bash(composer require*)",
+      "Bash(composer dump-autoload*)",
+      "Bash(php -l *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(python3 *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git stash*)",
+      "Bash(git checkout -b *)",
+      "Bash(git add *)",
+      "Bash(git commit*)",
+      "Bash(git push -u origin *)",
+      "Bash(gh pr*)",
+      "Bash(gh issue*)",
+      "Bash(curl http://127.0.0.1:388/*)",
+      "Bash(curl -s http://127.0.0.1:388/*)",
+      "Bash(curl -I http://127.0.0.1:388/*)",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(rm -rf src*)",
+      "Bash(rm -rf public*)",
+      "Bash(rm -rf vendor*)",
+      "Bash(rm -rf .git*)",
+      "Bash(rm -rf logs*)",
+      "Bash(rm -rf database*)",
+      "Bash(rm -rf .docker*)",
+      "Bash(docker compose down -v*)",
+      "Bash(docker-compose down -v*)",
+      "Bash(docker volume rm*)",
+      "Bash(*DROP DATABASE*)",
+      "Bash(*DROP SCHEMA*)",
+      "Bash(*TRUNCATE TABLE*)",
+      "Bash(*ALTER TABLE * DROP *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)",
+      "Bash(git commit*--no-verify*)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/statusline.sh\"",
+    "padding": 0
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/php-lint.sh\"" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/twig-cache-clear.sh\"" }
+        ]
+      }
+    ],
+    "Notification": [
+      { "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/desktop-notify.sh\"" } ] }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/php-lint-stop.sh\"" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/desktop-notify.sh\"" }
+        ]
+      }
+    ]
+  }
+}

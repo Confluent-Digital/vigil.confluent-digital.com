@@ -1,0 +1,228 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}{{ campaign.campaign_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <div class="page-sub"><a href="/app/campaigns" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Campagnes</a></div>
+        <h1 class="page-title mb-1">{{ campaign.campaign_name }}</h1>
+        <div class="page-sub">
+            {{ campaign.client_name }} ·
+            <span class="badge text-bg-{{ campaign.campaign_status == 'active' ? 'success' : 'warning' }}">{{ campaign.campaign_status }}</span> ·
+            payout par défaut <span class="num fw-semibold">{{ campaign.campaign_payout|money(campaign.campaign_currency) }}</span>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-outline-secondary btn-sm" href="/app/campaigns/{{ campaign.campaign_id }}/edit">
+            <i class="bi bi-pencil"></i> Modifier</a>
+    </div>
+</div>
+
+{% if url_ecart %}
+<div class="alert alert-warning py-2 d-flex align-items-start gap-2">
+    <i class="bi bi-exclamation-triangle mt-1"></i>
+    <div class="small">
+        <strong>Les liens ci-dessous ne sont pas cliquables depuis ici.</strong>
+        Ils sont construits sur <code>{{ app_url }}</code> (valeur de <code>APP_URL</code>),
+        alors que vous naviguez sur <code>{{ url_ecart }}</code>.
+        En développement, posez <code>APP_URL={{ url_ecart }}</code> dans le <code>.env</code>.
+    </div>
+</div>
+{% endif %}
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-box-arrow-up-right"></i> Destination</div>
+    <div class="card-body">
+        <code class="d-block text-break">{{ campaign.campaign_dest_url }}</code>
+        <div class="form-text">Les macros sont résolues au moment du clic, chaque valeur étant encodée.</div>
+    </div>
+</div>
+
+{# ── Liens publishers ──────────────────────────────────────────────────── #}
+<div class="card mb-3 card-table">
+    <div class="card-header justify-content-between">
+        <span><i class="bi bi-link-45deg"></i> Liens publishers</span>
+        <button class="btn btn-primary btn-xs" data-bs-toggle="collapse" data-bs-target="#addAccess">
+            <i class="bi bi-plus-lg"></i> Donner accès</button>
+    </div>
+
+    <div class="collapse {{ access is empty ? 'show' }}" id="addAccess">
+        <div class="card-body border-bottom bg-body-tertiary">
+            {% if available %}
+            <form method="post" action="/app/campaigns/{{ campaign.campaign_id }}/access" class="row g-2 align-items-end">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <div class="col-md-5">
+                    <label class="form-label" for="publisher_id">Publisher</label>
+                    <select class="form-select" id="publisher_id" name="publisher_id" required>
+                        {% for p in available %}<option value="{{ p.publisher_id }}">{{ p.publisher_name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="cp_payout">Payout spécifique</label>
+                    <input class="form-control text-end num" id="cp_payout" name="cp_payout" placeholder="défaut campagne">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-link-45deg"></i> Créer le lien</button>
+                </div>
+            </form>
+            {% else %}
+                <p class="text-muted mb-0">Tous les publishers actifs ont déjà un accès à cette campagne.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>Publisher</th><th>Lien de tracking</th><th class="text-end">Payout</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+        {% for a in access %}
+            <tr>
+                <td class="fw-semibold">{{ a.publisher_name }}</td>
+                <td>
+                    {% set link = base_url ~ '/c/' ~ a.cp_token %}
+                    <div class="input-group input-group-sm">
+                        <input class="form-control font-monospace" readonly value="{{ link }}"
+                               aria-label="Lien de tracking de {{ a.publisher_name }}">
+                        <button class="btn btn-outline-secondary copy-btn" type="button" data-copy="{{ link }}"
+                                title="Copier le lien" aria-label="Copier le lien"><i class="bi bi-clipboard"></i></button>
+                    </div>
+                </td>
+                <td class="text-end">{{ a.cp_payout ? a.cp_payout|money(campaign.campaign_currency) : '—' }}</td>
+                <td>
+                    <span class="badge text-bg-{{ a.cp_status == 'active' ? 'success' : 'warning' }}">{{ a.cp_status }}</span>
+                    {% if a.publisher_status != 'active' %}
+                        <span class="badge text-bg-secondary" title="Le publisher lui-même est {{ a.publisher_status }} : le lien ne redirige pas.">publisher {{ a.publisher_status }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-end text-nowrap">
+                    <form method="post" action="/app/campaigns/{{ campaign.campaign_id }}/access/{{ a.cp_id }}/toggle" class="d-inline">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-secondary btn-xs" type="submit">{{ a.cp_status == 'active' ? 'Suspendre' : 'Activer' }}</button>
+                    </form>
+                    <form method="post" action="/app/campaigns/{{ campaign.campaign_id }}/access/{{ a.cp_id }}/regenerate" class="d-inline"
+                          onsubmit="return confirm('Régénérer le token ? Le lien actuellement en circulation cessera de fonctionner et ses clics tomberont en 404.')">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-danger btn-xs" type="submit" title="À n'utiliser que si le lien a fuité">Régénérer</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">
+                {% include 'partials/_empty.html.twig' with {
+                    'icon': 'link-45deg',
+                    'title': 'Aucun lien de tracking',
+                    'text': "Un publisher ne peut pas fabriquer de lien lui-même : c'est ici qu'on le crée, en lui donnant accès à cette campagne. Sans lien en circulation, aucun clic ne sera enregistré."
+                } only %}
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+{# ── Destinations de relai ─────────────────────────────────────────────── #}
+<div class="card card-table">
+    <div class="card-header justify-content-between">
+        <span><i class="bi bi-arrow-repeat"></i> Destinations de relai S2S</span>
+        <button class="btn btn-primary btn-xs" data-bs-toggle="collapse" data-bs-target="#addPostback">
+            <i class="bi bi-plus-lg"></i> Ajouter</button>
+    </div>
+
+    <div class="collapse {{ postbacks is empty ? 'show' }}" id="addPostback">
+        <div class="card-body border-bottom bg-body-tertiary">
+            <p class="text-muted small">
+                Le money site n'appelle qu'une URL — la nôtre. C'est ici qu'on démultiplexe vers les plateformes externes.
+                Brancher une plateforme ne demande aucune ligne de code : un template et des macros suffisent.
+            </p>
+            <form method="post" action="/app/campaigns/{{ campaign.campaign_id }}/postback" class="row g-2">
+                <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                <input type="hidden" name="cpb_id" id="cpb_id" value="">
+                <div class="col-md-3">
+                    <label class="form-label" for="cpb_name">Nom</label>
+                    <input class="form-control" id="cpb_name" name="cpb_name" required placeholder="Plateforme externe">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="cpb_method">Méthode</label>
+                    <select class="form-select" id="cpb_method" name="cpb_method">
+                        <option value="GET">GET</option><option value="POST">POST</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="cpb_on_status">Statuts déclencheurs</label>
+                    <input class="form-control" id="cpb_on_status" name="cpb_on_status" value="approved"
+                           placeholder="approved,chargeback">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="cpb_success_pattern">Motif de succès (regex)</label>
+                    <input class="form-control font-monospace" id="cpb_success_pattern" name="cpb_success_pattern"
+                           placeholder="vide = seul le code HTTP compte">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="cpb_url">URL de relai</label>
+                    <div class="input-group">
+                        <input class="form-control font-monospace" id="cpb_url" name="cpb_url" required
+                               placeholder="https://plateforme.com/postback?cid={external_clickid}&amp;sum={payout}&amp;status={status}">
+                        <button class="btn btn-outline-secondary" type="button" id="previewBtn">Prévisualiser</button>
+                    </div>
+                    <div class="form-text">
+                        <span class="d-block mb-1">Macros disponibles — cliquez pour insérer au curseur :</span>
+                        {% for m in macros %}<code class="me-1 macro-chip" role="button" data-macro="{{ '{' ~ m ~ '}' }}">{{ '{' ~ m ~ '}' }}</code>{% endfor %}
+                    </div>
+                    <div id="previewOut" class="mt-2 small"></div>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer la destination</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Nom</th><th>URL</th><th>Méthode</th><th>Sur statut</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+        {% for pb in postbacks %}
+            <tr>
+                <td class="fw-semibold">{{ pb.cpb_name }}
+                    {% if pb.publisher_name %}<br><span class="badge text-bg-info">{{ pb.publisher_name }}</span>{% endif %}
+                </td>
+                <td><code class="small text-break">{{ pb.cpb_url }}</code></td>
+                <td>{{ pb.cpb_method }}</td>
+                <td><code>{{ pb.cpb_on_status }}</code></td>
+                <td><span class="badge text-bg-{{ pb.cpb_status == 'active' ? 'success' : 'warning' }}">{{ pb.cpb_status }}</span></td>
+                <td class="text-end text-nowrap">
+                    <form method="post" action="/app/campaigns/{{ campaign.campaign_id }}/postback/{{ pb.cpb_id }}/toggle" class="d-inline">
+                        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                        <button class="btn btn-outline-secondary btn-xs" type="submit">{{ pb.cpb_status == 'active' ? 'Suspendre' : 'Activer' }}</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="6">
+                {% include 'partials/_empty.html.twig' with {
+                    'icon': 'arrow-repeat',
+                    'title': 'Aucune destination de relai',
+                    'text': "Les conversions de cette campagne seront enregistrées, mais relayées nulle part : aucune plateforme externe n'en sera informée. Ajoutez une destination avec son template d'URL à macros."
+                } only %}
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Prévisualisation : résout les macros SANS appeler la destination. On regarde
+// l'URL à l'œil avant d'envoyer quoi que ce soit chez un partenaire.
+document.getElementById('previewBtn')?.addEventListener('click', async () => {
+    const out = document.getElementById('previewOut');
+    const body = new URLSearchParams({ csrf: '{{ csrf_token }}', url: document.getElementById('cpb_url').value });
+    const res = await fetch('/app/campaigns/postback-preview', { method: 'POST', body });
+    const data = await res.json();
+    out.innerHTML = '<div class="alert alert-secondary py-2 mb-0"><strong>URL résolue :</strong><br>'
+        + '<code class="text-break">' + data.url.replace(/</g, '&lt;') + '</code>'
+        + (data.unknown.length ? '<div class="text-danger mt-1">Macros inconnues : ' + data.unknown.join(', ') + '</div>' : '')
+        + '</div>';
+});
+</script>
+{% endblock %}

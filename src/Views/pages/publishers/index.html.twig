@@ -1,0 +1,55 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Publishers{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Publishers</h1>
+        <div class="page-sub">Les sources de trafic · {{ publishers|length }} enregistré(s)</div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary btn-sm" href="/app/publishers/add"><i class="bi bi-plus-lg"></i> Nouveau publisher</a>
+    </div>
+</div>
+<div class="card card-table">
+<div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+    <thead><tr>
+        <th>Nom</th><th>Token</th><th>Contact</th><th class="text-end">Accès</th><th>Statut</th><th class="text-end">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for p in publishers %}
+        <tr>
+            <td class="fw-semibold">{{ p.publisher_name }}</td>
+            <td><code>{{ p.publisher_token }}</code></td>
+            <td class="text-muted">{{ p.publisher_contact_email|default('—') }}</td>
+            <td class="text-end text-nowrap" data-order="{{ p.nb_access }}">{{ p.nb_access }} <span class="text-muted">campagne(s)</span></td>
+            <td><span class="badge text-bg-{{ p.publisher_status == 'active' ? 'success' : (p.publisher_status == 'paused' ? 'warning' : 'secondary') }}">{{ p.publisher_status }}</span></td>
+            <td class="text-end text-nowrap">
+                <a class="btn btn-outline-secondary btn-xs" href="/app/publishers/{{ p.publisher_id }}/edit">Modifier</a>
+                {% if p.publisher_status != 'archived' %}
+                <form method="post" action="/app/publishers/{{ p.publisher_id }}/delete" class="d-inline"
+                      onsubmit="return confirm('Archiver « {{ p.publisher_name }} » ? Ses liens cesseront de rediriger.')">
+                    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+                    <button class="btn btn-outline-danger btn-xs" type="submit">Archiver</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">
+            {% include 'partials/_empty.html.twig' with {
+                'icon': 'people',
+                'title': 'Aucun publisher',
+                'text': "Un publisher ne peut pas fabriquer son lien lui-même : il faut d'abord le créer ici, puis lui donner accès à une campagne. C'est cet accès qui génère le lien de tracking.",
+                'cta_url': '/app/publishers/add',
+                'cta_label': 'Créer le premier publisher',
+                'alt_url': '/app/campaigns',
+                'alt_label': 'Voir les campagnes'
+            } only %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

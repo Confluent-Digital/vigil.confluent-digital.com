@@ -1,0 +1,58 @@
+{% extends 'layouts/base.html.twig' %}
+{% block title %}Campagnes{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Campagnes</h1>
+        <div class="page-sub">Destination, payout, liens publishers et relais S2S · {{ campaigns|length }} enregistrée(s)</div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary btn-sm" href="/app/campaigns/add"><i class="bi bi-plus-lg"></i> Nouvelle campagne</a>
+    </div>
+</div>
+<div class="card card-table">
+<div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+    <thead><tr>
+        <th>Campagne</th><th>Client</th><th class="text-end">Payout</th>
+        <th class="text-end">Liens</th><th class="text-end">Relais</th><th>Postback</th><th>Statut</th><th class="text-end">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for c in campaigns %}
+        <tr>
+            <td class="fw-semibold"><a href="/app/campaigns/{{ c.campaign_id }}">{{ c.campaign_name }}</a></td>
+            <td>{{ c.client_name }}</td>
+            <td class="text-end" data-order="{{ c.campaign_payout }}">{{ c.campaign_payout|money(c.campaign_currency) }}</td>
+            <td class="text-end" data-order="{{ c.nb_access }}">{{ c.nb_access }}</td>
+            <td class="text-end" data-order="{{ c.nb_postbacks }}">{{ c.nb_postbacks }}</td>
+            <td>
+                {% if c.campaign_postback_secret or c.campaign_postback_ips %}
+                    <span class="badge text-bg-success" title="Secret et/ou whitelist IP"><i class="bi bi-shield-check"></i> protégé</span>
+                {% else %}
+                    <span class="badge text-bg-danger" title="N'importe qui connaissant un clickid peut créditer une conversion">
+                        <i class="bi bi-shield-exclamation"></i> ouvert</span>
+                {% endif %}
+            </td>
+            <td><span class="badge text-bg-{{ c.campaign_status == 'active' ? 'success' : (c.campaign_status == 'paused' ? 'warning' : 'secondary') }}">{{ c.campaign_status }}</span></td>
+            <td class="text-end text-nowrap">
+                <a class="btn btn-outline-secondary btn-xs" href="/app/campaigns/{{ c.campaign_id }}">Ouvrir</a>
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="8">
+            {% include 'partials/_empty.html.twig' with {
+                'icon': 'megaphone',
+                'title': 'Aucune campagne',
+                'text': "Une campagne porte l'URL de destination, le payout et le secret du postback entrant. Elle a besoin d'un client : créez-en un d'abord si ce n'est pas déjà fait.",
+                'cta_url': '/app/campaigns/add',
+                'cta_label': 'Créer une campagne',
+                'alt_url': '/app/clients/add',
+                'alt_label': "Créer un client d'abord"
+            } only %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

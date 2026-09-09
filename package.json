@@ -1,0 +1,11 @@
+{
+  "name": "vigil-assets",
+  "private": true,
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3"
+  },
+  "scripts": {
+    "assets": "bash scripts/copy-assets.sh"
+  }
+}
