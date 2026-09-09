@@ -75,7 +75,12 @@ Badges `bg-warning` en texte noir, rouge adouci (`#f87171`).
 
 ## Cache Twig
 
-`cache/twig/` est vide automatiquement par le hook `twig-cache-clear.sh` a
-chaque edition d'un `.twig`. En production, `auto_reload = false` : le cache
-**doit** etre purge au deploiement, sinon une modification de template n'apparait
-jamais.
+En developpement, Twig **ne cache pas** : chaque requete recompile. C'est pour
+cela qu'une modification de template apparait immediatement — et aussi pourquoi
+un defaut lie au cache ne se voit qu'en production.
+
+En production, le cache vit **dans le conteneur** (`/tmp/vigil-twig`, reglable
+par `TWIG_CACHE_DIR`), jamais sur le volume monte : c'est du PHP compile,
+regenerable, et le mettre en partage avec l'hote exposait a des conflits de
+droits illisibles. Redemarrer `vigil_php` purge le cache — il n'y a plus de
+`rm -rf cache/twig/*` a se rappeler au deploiement.

@@ -20,7 +20,30 @@ date_default_timezone_set('UTC');
 $container = new Container();
 
 $container->set(Twig::class, static function () use ($root): Twig {
-    $cache = Env::get('APP_ENV') === 'production' ? $root . '/cache/twig' : false;
+    // Le cache Twig vit DANS le conteneur, pas sur le volume monte.
+    //
+    // C'est du PHP compile, regenerable a tout moment : rien qui merite d'etre
+    // conserve. Le placer dans un repertoire partage avec l'hote n'apportait
+    // rien et exposait a toute la classe des conflits de droits — le conteneur
+    // tourne sous un UID fixe par le .env, l'hote sous un autre, et Twig
+    // echoue sur « Unable to create the cache directory » sans que la cause
+    // soit lisible.
+    //
+    // Effet de bord bienvenu : redemarrer le conteneur purge le cache. Plus
+    // besoin d'un `rm -rf cache/twig/*` au deploiement, ni de s'en souvenir.
+    $cache = false;
+
+    if (Env::get('APP_ENV') === 'production') {
+        $cache = rtrim((string) Env::get('TWIG_CACHE_DIR', sys_get_temp_dir() . '/vigil-twig'), '/');
+
+        if (!is_dir($cache) && !@mkdir($cache, 0775, true) && !is_dir($cache)) {
+            // Plutot que de laisser Twig echouer a la premiere page rendue,
+            // on renonce au cache et on le dit. Une application lente vaut
+            // mieux qu'une application morte.
+            error_log('[vigil] cache Twig indisponible (' . $cache . ') : compilation a chaque requete');
+            $cache = false;
+        }
+    }
 
     $twig = Twig::create($root . '/src/Views', [
         'cache'       => $cache,

@@ -39,7 +39,16 @@ toutes la meme impression : « ca ne marche pas ».
    frequente d'un premier branchement, et elle est desormais visible sur
    `/app/dead-links` (section « Postbacks refuses »).
 
-3. **`APP_URL` pointe ailleurs que le domaine reel.** Les liens de tracking
+3. **Le cache Twig n'est plus sur le volume monte.** Il l'etait, et cela
+   produisait « Unable to create the cache directory » des la premiere page en
+   production : le conteneur tourne sous l'UID du `.env`, l'hote sous un autre,
+   et un `chown` ne suffit pas quand les deux ne coincident pas. Il vit
+   desormais dans `/tmp/vigil-twig`, a l'interieur du conteneur —
+   `TWIG_CACHE_DIR` permet de le deplacer. Si le repertoire est inaccessible,
+   l'application renonce au cache et le journalise, plutot que de tomber : une
+   application lente vaut mieux qu'une application morte.
+
+4. **`APP_URL` pointe ailleurs que le domaine reel.** Les liens de tracking
    affiches dans le back-office menent dans le vide. `init.sh` interroge
    `$APP_URL/health` et refuse de conclure au vert.
 
@@ -56,7 +65,9 @@ toutes la meme impression : « ca ne marche pas ».
       — sans partition, l'ingestion s'arrete au changement de mois
 - [ ] `crontab -u www-data config/cron`, puis verifier que
       `PostbackFlushTask` s'execute
-- [ ] `rm -rf cache/twig/*` (en production `auto_reload` est desactive)
+- [ ] ~~`rm -rf cache/twig/*`~~ — plus necessaire : le cache Twig vit
+      **dans le conteneur** (`/tmp/vigil-twig`), pas sur le volume monte.
+      Redemarrer `vigil_php` le purge.
 - [ ] Changer le mot de passe du compte administrateur cree par le seed
 - [ ] Un parcours reel : lien -> money site -> postback -> relai, en verifiant
       `/app/queue` (code HTTP et corps de reponse) et `/app/dead-links`
