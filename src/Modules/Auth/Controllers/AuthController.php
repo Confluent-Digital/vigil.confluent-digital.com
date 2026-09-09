@@ -80,8 +80,35 @@ final class AuthController
         LoginGuard::record($email, (int) $user['user_id'], 'password_ok', $ip, $ua);
 
         return $response
-            ->withHeader('Location', TwoFactor::isEnrolled($user) ? '/login/verify' : '/login/enroll')
+            ->withHeader('Location', $this->secondFactorPath($user))
             ->withStatus(302);
+    }
+
+    /**
+     * Ou envoyer apres un mot de passe accepte.
+     *
+     * Le cas qui n'etait pas traite : un compte **enrole puis prive de son
+     * secret** (telephone perdu, secret efface). `isEnrolled()` repond alors
+     * non, et on l'envoyait vers l'enrolement libre. Deux consequences :
+     *
+     * 1. Ses codes de secours, toujours valides en base, ne lui etaient jamais
+     *    proposes — il devait reconfigurer alors qu'il avait de quoi entrer.
+     * 2. Surtout, **quiconque detient le mot de passe pouvait enroler SON
+     *    appareil** : un secret absent revenait a desactiver le second facteur
+     *    pour le premier arrivant. C'est l'inverse de ce que le facteur promet.
+     *
+     * Tant qu'il reste un code de secours, on passe donc par `/login/verify`,
+     * qui les accepte — comme il accepte le code recu par courriel.
+     */
+    private function secondFactorPath(array $user): string
+    {
+        if (TwoFactor::isEnrolled($user)) {
+            return '/login/verify';
+        }
+
+        return TwoFactor::remainingRecoveryCodes((int) $user['user_id']) > 0
+            ? '/login/verify'
+            : '/login/enroll';
     }
 
     // ── Étape 2a : enrôlement, quand le compte n'a pas encore d'application ──
@@ -103,7 +130,7 @@ final class AuthController
         if ($user === null) {
             return $response->withHeader('Location', '/login')->withStatus(302);
         }
-        if (TwoFactor::isEnrolled($user)) {
+        if ($this->secondFactorPath($user) === '/login/verify') {
             return $response->withHeader('Location', '/login/verify')->withStatus(302);
         }
 
@@ -132,6 +159,12 @@ final class AuthController
         $user = Auth::pendingUser();
         if ($user === null) {
             return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        // Meme garde-fou que sur le GET : sans lui, un POST direct contournerait
+        // la redirection et enrolerait quand meme un appareil.
+        if ($this->secondFactorPath($user) === '/login/verify') {
+            return $response->withHeader('Location', '/login/verify')->withStatus(302);
         }
 
         $secret = $_SESSION['enroll_secret'] ?? '';
@@ -176,9 +209,14 @@ final class AuthController
         }
 
         return $this->view->render($response, 'pages/auth/verify.html.twig', [
-            'user_email'   => $user['user_email'],
-            'code_sent'    => !empty($_SESSION['email_code_sent']),
+            'user_email'    => $user['user_email'],
+            'code_sent'     => !empty($_SESSION['email_code_sent']),
             'can_send_mail' => LoginGuard::canSendEmailCode((int) $user['user_id']),
+            // Ecran atteint sans secret TOTP : c'est le code de secours qui
+            // ouvre. L'ecran doit le dire, sinon on saisit indefiniment un code
+            // a six chiffres que plus rien ne produit.
+            'enrolled'      => TwoFactor::isEnrolled($user),
+            'recovery_left' => TwoFactor::remainingRecoveryCodes((int) $user['user_id']),
         ]);
     }
 
@@ -297,6 +335,13 @@ final class AuthController
                 'code_sent'     => !empty($_SESSION['email_code_sent']),
                 'can_send_mail' => $user !== null
                     && LoginGuard::canSendEmailCode((int) $user['user_id']),
+                // Le rendu d'erreur passe par le meme gabarit : sans ces deux
+                // cles, l'ecran d'un compte sans secret perdrait sa consigne
+                // au premier code refuse — exactement quand elle sert le plus.
+                'enrolled'      => $user !== null && TwoFactor::isEnrolled($user),
+                'recovery_left' => $user !== null
+                    ? TwoFactor::remainingRecoveryCodes((int) $user['user_id'])
+                    : 0,
             ]
         );
     }

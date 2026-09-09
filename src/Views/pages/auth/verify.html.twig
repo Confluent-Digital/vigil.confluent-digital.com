@@ -12,13 +12,27 @@
         <div class="card-body">
             {% if error %}<div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
 
+            {% if not enrolled %}
+            <div class="alert alert-warning py-2 mb-3 small">
+                <i class="bi bi-phone-flip"></i>
+                <strong>Votre application d'authentification n'est plus rattachée à ce compte.</strong>
+                Entrez un <strong>code de secours</strong> ({{ recovery_left }} restant{{ recovery_left > 1 ? 's' : '' }}),
+                ou faites-vous envoyer un code par courriel. Vous pourrez reconfigurer
+                l'application une fois connecté, depuis Sécurité.
+            </div>
+            {% endif %}
+
             <form method="post" action="/login/verify">
                 <input type="hidden" name="csrf" value="{{ csrf_token }}">
                 <label class="form-label" for="code">
-                    {% if code_sent %}Code de votre application ou reçu par courriel{% else %}Code de votre application{% endif %}
+                    {% if not enrolled %}Code de secours{% if code_sent %} ou code reçu par courriel{% endif %}
+                    {% elseif code_sent %}Code de votre application ou reçu par courriel
+                    {% else %}Code de votre application{% endif %}
                 </label>
-                <input class="form-control code-input mb-3" id="code" name="code" inputmode="numeric"
-                       autocomplete="one-time-code" maxlength="12" placeholder="000000" required autofocus>
+                <input class="form-control code-input mb-3" id="code" name="code"
+                       inputmode="{{ enrolled ? 'numeric' : 'text' }}"
+                       autocomplete="one-time-code" maxlength="12"
+                       placeholder="{{ enrolled ? '000000' : 'xxxx-xxxx' }}" required autofocus>
                 <button class="btn btn-primary w-100" type="submit">Vérifier</button>
             </form>
 

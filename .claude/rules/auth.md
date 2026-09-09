@@ -134,6 +134,43 @@ Regles qui en decoulent :
   entrees « Vigil : untel@… » cohabitent sans qu'on puisse dire laquelle est
   vivante, et l'ancienne rend des codes refuses.
 
+## Un secret absent ne vaut PAS « pas de second facteur »
+
+`isEnrolled()` repond non dans deux situations opposees :
+
+| Situation | Ce qu'il faut faire |
+|---|---|
+| compte neuf, jamais enrole | proposer l'enrolement |
+| compte enrole **puis prive de son secret** | exiger un code de secours |
+
+On ne faisait pas la difference, et les deux menaient a `/login/enroll`. Deux
+consequences, dont une grave :
+
+1. **Quiconque detenait le mot de passe pouvait enroler SON appareil.** Un
+   secret efface revenait donc a desactiver le second facteur au profit du
+   premier arrivant — l'inverse exact de ce qu'il promet. Et un secret s'efface :
+   c'est arrive quatre fois.
+2. La personne legitime ne se voyait **jamais** proposer ses codes de secours,
+   pourtant intacts en base. Elle reconfigurait alors qu'elle avait de quoi
+   entrer, et accumulait une entree morte de plus dans son application.
+
+`AuthController::secondFactorPath()` tranche desormais sur les codes de secours
+restants : tant qu'il en reste un, on passe par `/login/verify`, qui les accepte
+au meme titre que le code recu par courriel. Le garde-fou est pose sur le GET
+**et** sur le POST d'enrolement — sinon un POST direct le contournerait.
+
+L'ecran de verification dit alors explicitement qu'il attend un code de secours,
+et combien il en reste. Sans cela on saisit indefiniment un code a six chiffres
+que plus rien ne produit.
+
+Verrouille par
+`EnrollmentTest::testSansSecretMaisAvecCodesDeSecoursOnNePeutPasEnroler`.
+
+**Consequence pratique** : ne jamais supprimer les lignes de
+`t_user_recovery_code` en meme temps que le secret. Ce sont elles qui
+distinguent « compte neuf » de « compte a recuperer », et elles seules
+permettent de rentrer.
+
 ## Gerer les comptes : `bin/user.php`, pas du SQL
 
 ```bash
